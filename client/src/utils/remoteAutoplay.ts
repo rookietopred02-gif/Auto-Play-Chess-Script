@@ -46,6 +46,7 @@ let lastMatchId: number | undefined
 let hasStartedListener = false
 let mouseStepDelaySeconds = 0
 let mouseClickDelaySeconds = 0
+let mouseAbsCoordMode: "screen" | "viewport" | undefined
 
 const getConnectionsFolder = (): Folder | undefined => {
     const connections = ReplicatedStorage.FindFirstChild("Connections")
@@ -222,7 +223,7 @@ const TILE_SAMPLE_MARGIN = 0.08
 const TILE_SAMPLE_HEIGHT_OFFSET = 0.08
 const DEBUG_POINT_MARKER_SIZE = 0.1
 const DEBUG_POINT_MARKER_LIFETIME_SECONDS = 6
-const DEBUG_POINT_MARKER_WORLD_OFFSET_Y = 0.08
+const DEBUG_POINT_MARKER_WORLD_OFFSET_Y = 0
 const DEBUG_POINT_MARKER_PIXEL_SIZE = 18
 
 type ClickPhase = "source" | "destination"
@@ -776,51 +777,187 @@ const buildClickContext = (
 
 const getCurrentCursorPosition = (): Vector2 => {
     const cursor = UserInputService.GetMouseLocation()
-    return new Vector2(math.floor(cursor.X), math.floor(cursor.Y))
+    return new Vector2(math.round(cursor.X), math.round(cursor.Y))
 }
 
-const moveRelativeToTarget = (
-    targetX: number,
-    targetY: number
-): [boolean, string] => {
-    const cursor = getCurrentCursorPosition()
-    const deltaX = targetX - cursor.X
-    const deltaY = targetY - cursor.Y
-
-    const [didMoveRelative, moveError] = pcall(() =>
-        mousemoverel(deltaX, deltaY)
-    )
-    if (!didMoveRelative) {
-        return [false, `mousemoverel failed (${moveError})`]
-    }
-
-    return [true, `mouse moved(rel-direct) to ${targetX},${targetY}`]
-}
-
-const ensureExactCursorAtTarget = (
-    targetX: number,
-    targetY: number
-): [boolean, number, number] => {
-    let finalDeltaX = 0
-    let finalDeltaY = 0
-
-    for (let attempt = 0; attempt < 4; attempt++) {
-        const cursor = getCurrentCursorPosition()
-        const deltaX = targetX - cursor.X
-        const deltaY = targetY - cursor.Y
-        finalDeltaX = deltaX
-        finalDeltaY = deltaY
-        if (deltaX === 0 && deltaY === 0) {
-            return [true, 0, 0]
-        }
-
-        const [didCorrect] = pcall(() => mousemoverel(deltaX, deltaY))
-        if (!didCorrect) {
-            return [false, deltaX, deltaY]
+const resolveMoveTargetFromCalculatedPoint = (
+    resolvedPoint: SampleHitPoint
+): [
+    | {
+          screenX: number
+          screenY: number
+          viewportX: number
+          viewportY: number
+      }
+    | undefined,
+    string,
+] => {
+    const fallbackX = math.round(resolvedPoint.screen.X)
+    const fallbackY = math.round(resolvedPoint.screen.Y)
+    const camera = Workspace.CurrentCamera
+    if (camera) {
+        const markerWorldPoint = resolvedPoint.world
+        const [markerScreenPoint, screenVisible] =
+            camera.WorldToScreenPoint(markerWorldPoint)
+        const [markerViewportPoint, viewportVisible] =
+            camera.WorldToViewportPoint(markerWorldPoint)
+        if (screenVisible || viewportVisible) {
+            return [
+                {
+                    screenX: math.round(markerScreenPoint.X),
+                    screenY: math.round(markerScreenPoint.Y),
+                    viewportX: math.round(markerViewportPoint.X),
+                    viewportY: math.round(markerViewportPoint.Y),
+                },
+                "marker-projected",
+            ]
         }
     }
 
-    return [false, finalDeltaX, finalDeltaY]
+    return [
+        {
+            screenX: fallbackX,
+            screenY: fallbackY,
+            viewportX: fallbackX,
+            viewportY: fallbackY,
+        },
+        "resolved-screen-fallback",
+    ]
+}
+
+const moveAbsoluteToTarget = (
+    target: {
+        screenX: number
+        screenY: number
+        viewportX: number
+        viewportY: number
+    }
+): [boolean, string, number, number, Vector2] => {
+    let cursorAfterMove = getCurrentCursorPosition()
+
+    const tryMode = (
+        mode: "screen" | "viewport"
+    ): [
+        boolean,
+        string,
+        | {
+              dx: number
+              dy: number
+              cursor: Vector2
+              score: number
+          }
+        | undefined,
+        ("screen" | "viewport") | undefined,
+    ] => {
+        const commandX = mode === "viewport" ? target.viewportX : target.screenX
+        const commandY = mode === "viewport" ? target.viewportY : target.screenY
+        const [didMoveAbsolute, moveError] = pcall(() =>
+            mousemoveabs(commandX, commandY)
+        )
+        if (!didMoveAbsolute) {
+            return [false, `mousemoveabs failed (${moveError})`, undefined, undefined]
+        }
+
+        task.wait()
+        cursorAfterMove = getCurrentCursorPosition()
+        const dx = math.round(target.screenX - cursorAfterMove.X)
+        const dy = math.round(target.screenY - cursorAfterMove.Y)
+        return [
+            true,
+            `mouse moved(abs/${mode}) target=${target.screenX},${target.screenY} cmd=${commandX},${commandY} dx=${dx} dy=${dy}`,
+            {
+                dx,
+                dy,
+                cursor: cursorAfterMove,
+                score: math.abs(dx) + math.abs(dy),
+            },
+            mode,
+        ]
+    }
+
+    if (mouseAbsCoordMode === undefined) {
+        const [okScreen, msgScreen, stateScreen, modeScreen] = tryMode("screen")
+        const [okViewport, msgViewport, stateViewport, modeViewport] =
+            tryMode("viewport")
+
+        if (okScreen && okViewport && stateScreen && stateViewport && modeScreen) {
+            if (stateViewport.score < stateScreen.score && modeViewport) {
+                mouseAbsCoordMode = modeViewport
+                return [
+                    true,
+                    msgViewport,
+                    stateViewport.dx,
+                    stateViewport.dy,
+                    stateViewport.cursor,
+                ]
+            }
+
+            mouseAbsCoordMode = modeScreen
+            const [okScreen2, msgScreen2, stateScreen2] = tryMode(modeScreen)
+            if (okScreen2 && stateScreen2) {
+                return [
+                    true,
+                    msgScreen2,
+                    stateScreen2.dx,
+                    stateScreen2.dy,
+                    stateScreen2.cursor,
+                ]
+            }
+
+            return [
+                true,
+                msgScreen,
+                stateScreen.dx,
+                stateScreen.dy,
+                stateScreen.cursor,
+            ]
+        }
+
+        if (okScreen && stateScreen && modeScreen) {
+            mouseAbsCoordMode = modeScreen
+            return [
+                true,
+                msgScreen,
+                stateScreen.dx,
+                stateScreen.dy,
+                stateScreen.cursor,
+            ]
+        }
+
+        if (okViewport && stateViewport && modeViewport) {
+            mouseAbsCoordMode = modeViewport
+            return [
+                true,
+                msgViewport,
+                stateViewport.dx,
+                stateViewport.dy,
+                stateViewport.cursor,
+            ]
+        }
+
+        return [
+            false,
+            `abs move failed in both modes (screen: ${msgScreen}; viewport: ${msgViewport})`,
+            0,
+            0,
+            cursorAfterMove,
+        ]
+    }
+
+    const [ok, msg, state] = tryMode(mouseAbsCoordMode)
+    if (ok && state) {
+        return [true, msg, state.dx, state.dy, state.cursor]
+    }
+
+    const otherMode: "screen" | "viewport" =
+        mouseAbsCoordMode === "screen" ? "viewport" : "screen"
+    const [okOther, msgOther, otherState] = tryMode(otherMode)
+    if (okOther && otherState) {
+        mouseAbsCoordMode = otherMode
+        return [true, msgOther, otherState.dx, otherState.dy, otherState.cursor]
+    }
+
+    return [false, `abs move failed (${msg}; ${msgOther})`, 0, 0, cursorAfterMove]
 }
 
 const applyClickNudge = (): [boolean, string] => {
@@ -837,94 +974,41 @@ const applyClickNudge = (): [boolean, string] => {
     return [true, "nudge ok"]
 }
 
-const clickSourceContext = (
+const clickContextCommon = (
     context: ClickResolutionContext,
     resolvedPoint: SampleHitPoint,
     pointMessage: string
 ): [boolean, string, Vector2 | undefined] => {
-    const targetX = math.round(resolvedPoint.screen.X)
-    const targetY = math.round(resolvedPoint.screen.Y)
-
-    const [didMove, moveMessage] = moveRelativeToTarget(targetX, targetY)
+    const [target, targetSource] = resolveMoveTargetFromCalculatedPoint(resolvedPoint)
+    if (!target) {
+        return [false, `${context.phase} ${context.coordinate} failed (${targetSource})`, undefined]
+    }
+    const [didMove, moveMessage] = moveAbsoluteToTarget(target)
     if (!didMove) {
         return [false, `${context.phase} ${context.coordinate} failed (${moveMessage})`, undefined]
     }
-
-    const [isExactAfterMove, dxAfterMove, dyAfterMove] = ensureExactCursorAtTarget(
-        targetX,
-        targetY
-    )
-    if (!isExactAfterMove) {
-        return [
-            false,
-            `${context.phase} ${context.coordinate} failed (not exact after move: dx=${dxAfterMove}, dy=${dyAfterMove})`,
-            undefined,
-        ]
-    }
-
-    task.wait(mouseClickDelaySeconds)
-    mouse1click()
-
-    const clickedPoint = getCurrentCursorPosition()
-    return [
-        true,
-        `${context.button} clicked ${context.phase} ${context.coordinate} @ screen(${clickedPoint.X},${clickedPoint.Y}) world(${math.round(resolvedPoint.world.X * 100) / 100},${math.round(resolvedPoint.world.Y * 100) / 100},${math.round(resolvedPoint.world.Z * 100) / 100}) (${pointMessage})`,
-        clickedPoint,
-    ]
-}
-
-const clickDestinationContext = (
-    context: ClickResolutionContext,
-    resolvedPoint: SampleHitPoint,
-    pointMessage: string
-): [boolean, string, Vector2 | undefined] => {
-    const targetX = math.round(resolvedPoint.screen.X)
-    const targetY = math.round(resolvedPoint.screen.Y)
-
-    const [didMove, moveMessage] = moveRelativeToTarget(targetX, targetY)
-    if (!didMove) {
-        return [false, `${context.phase} ${context.coordinate} failed (${moveMessage})`, undefined]
-    }
-
-    const [isExactAfterMove, dxAfterMove, dyAfterMove] = ensureExactCursorAtTarget(
-        targetX,
-        targetY
-    )
-    if (!isExactAfterMove) {
-        return [
-            false,
-            `${context.phase} ${context.coordinate} failed (not exact after move: dx=${dxAfterMove}, dy=${dyAfterMove})`,
-            undefined,
-        ]
-    }
-
+    task.wait(0.1)
     const [didNudge, nudgeMessage] = applyClickNudge()
     if (!didNudge) {
         return [false, `${context.phase} ${context.coordinate} failed (${nudgeMessage})`, undefined]
     }
-
-    const [isExactAfterNudge, dxAfterNudge, dyAfterNudge] = ensureExactCursorAtTarget(
-        targetX,
-        targetY
-    )
-    if (!isExactAfterNudge) {
-        return [
-            false,
-            `${context.phase} ${context.coordinate} failed (not exact after nudge: dx=${dxAfterNudge}, dy=${dyAfterNudge})`,
-            undefined,
-        ]
+    const [didMove2, moveMessage2] = moveAbsoluteToTarget(target)
+    if (!didMove2) {
+        return [false, `${context.phase} ${context.coordinate} failed (${moveMessage2})`, undefined]
     }
-
-    task.wait(mouseClickDelaySeconds)
+    task.wait()
     mouse1click()
 
     const clickedPoint = getCurrentCursorPosition()
     return [
         true,
-        `${context.button} clicked ${context.phase} ${context.coordinate} @ screen(${clickedPoint.X},${clickedPoint.Y}) world(${math.round(resolvedPoint.world.X * 100) / 100},${math.round(resolvedPoint.world.Y * 100) / 100},${math.round(resolvedPoint.world.Z * 100) / 100}) (${pointMessage})`,
+        `${context.button} clicked ${context.phase} ${context.coordinate} @ screen(${clickedPoint.X},${clickedPoint.Y}) world(${math.round(resolvedPoint.world.X * 100) / 100},${math.round(resolvedPoint.world.Y * 100) / 100},${math.round(resolvedPoint.world.Z * 100) / 100}) (${pointMessage}; target=${target.screenX},${target.screenY} via ${targetSource}; ${moveMessage}; ${nudgeMessage}; ${moveMessage2})`,
         clickedPoint,
     ]
 }
+
+const clickSourceContext = clickContextCommon
+const clickDestinationContext = clickContextCommon
 
 const executeRemoteEvent = (move: string, board: Board): [boolean, string] => {
     const movePieceEvent = getMovePieceEvent()
@@ -1017,7 +1101,7 @@ const executeMouseApi = (
         return [false, fromClickMessage]
     }
 
-    task.wait(mouseStepDelaySeconds)
+    task.wait(math.max(mouseStepDelaySeconds, 0.1))
 
     const [didClickTo, toClickMessage] = clickDestinationContext(
         clickContext.destination,
