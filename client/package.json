@@ -1,0 +1,31 @@
+{
+    "name": "roblox-chess-script",
+    "main": "main.client.lua",
+    "scripts": {
+        "build": "npx rbxtsc",
+        "watch": "npx rbxtsc -w",
+        "bundle": "npm run build && npx mkdirp dist && lune run wax bundle output=\"dist/main.lua\"",
+        "bundle-ci": "npm run build && npx mkdirp dist && lune run wax bundle output=\"dist/main.lua\" ci-mode=true"
+    },
+    "author": "keplerHaloxx",
+    "license": "MIT",
+    "devDependencies": {
+        "@rbxts/compiler-types": "3.0.0-types.0",
+        "@rbxts/types": "^1.0.813",
+        "@typescript-eslint/eslint-plugin": "^8.18.1",
+        "@typescript-eslint/parser": "^8.18.1",
+        "cross-env": "^7.0.3",
+        "eslint": "^9.24.0",
+        "eslint-config-prettier": "^10.1.1",
+        "eslint-plugin-prettier": "^5.2.1",
+        "eslint-plugin-roblox-ts": "^0.0.36",
+        "mkdirp": "^3.0.1",
+        "prettier": "^3.4.2",
+        "roblox-ts": "^3.0.0",
+        "typescript": "^5.7.2"
+    },
+    "dependencies": {
+        "@rbxts/services": "^1.5.5",
+        "rbxts-transform-debug": "^2.2.0"
+    }
+}
