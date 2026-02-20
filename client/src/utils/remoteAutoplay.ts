@@ -220,6 +220,12 @@ const CLICK_RAY_DISTANCE = 2048
 const TILE_SAMPLE_GRID_HIGH = 11
 const TILE_SAMPLE_MARGIN = 0.08
 const TILE_SAMPLE_HEIGHT_OFFSET = 0.08
+const RELATIVE_MOVE_MAX_STEP_PIXELS = 120
+const RELATIVE_MOVE_STEP_DELAY_SECONDS = 0.008
+const RELATIVE_MOVE_ARRIVAL_TOLERANCE_PIXELS = 2
+const RELATIVE_MOVE_ARRIVAL_MAX_POLLS = 40
+const RELATIVE_MOVE_ARRIVAL_POLL_DELAY_SECONDS = 0.01
+const RELATIVE_MOVE_RETRY_ATTEMPTS = 2
 
 type ClickPhase = "source" | "destination"
 
@@ -687,9 +693,72 @@ const buildClickContext = (
     ]
 }
 
+const moveRelativeChunked = (
+    deltaX: number,
+    deltaY: number
+): [boolean, string] => {
+    let remainingX = deltaX
+    let remainingY = deltaY
+
+    while (remainingX !== 0 || remainingY !== 0) {
+        const stepX =
+            math.abs(remainingX) > RELATIVE_MOVE_MAX_STEP_PIXELS
+                ? RELATIVE_MOVE_MAX_STEP_PIXELS * math.sign(remainingX)
+                : remainingX
+        const stepY =
+            math.abs(remainingY) > RELATIVE_MOVE_MAX_STEP_PIXELS
+                ? RELATIVE_MOVE_MAX_STEP_PIXELS * math.sign(remainingY)
+                : remainingY
+
+        const [didMoveStep, stepError] = pcall(() => mousemoverel(stepX, stepY))
+        if (!didMoveStep) {
+            return [false, `mousemoverel failed (${stepError})`]
+        }
+
+        remainingX -= stepX
+        remainingY -= stepY
+        task.wait(RELATIVE_MOVE_STEP_DELAY_SECONDS)
+    }
+
+    return [true, "mouse moved(rel) by chunked delta"]
+}
+
+const getCursorOffsetToTarget = (
+    targetX: number,
+    targetY: number
+): [number, number] => {
+    const cursor = UserInputService.GetMouseLocation()
+    const offsetX = targetX - math.floor(cursor.X)
+    const offsetY = targetY - math.floor(cursor.Y)
+    return [offsetX, offsetY]
+}
+
+const waitCursorArrival = (targetX: number, targetY: number): [boolean, number, number] => {
+    let finalOffsetX = 0
+    let finalOffsetY = 0
+
+    for (let i = 0; i < RELATIVE_MOVE_ARRIVAL_MAX_POLLS; i++) {
+        const [offsetX, offsetY] = getCursorOffsetToTarget(targetX, targetY)
+        finalOffsetX = offsetX
+        finalOffsetY = offsetY
+
+        if (
+            math.abs(offsetX) <= RELATIVE_MOVE_ARRIVAL_TOLERANCE_PIXELS &&
+            math.abs(offsetY) <= RELATIVE_MOVE_ARRIVAL_TOLERANCE_PIXELS
+        ) {
+            return [true, offsetX, offsetY]
+        }
+
+        task.wait(RELATIVE_MOVE_ARRIVAL_POLL_DELAY_SECONDS)
+    }
+
+    return [false, finalOffsetX, finalOffsetY]
+}
+
 const moveMouseToScreen = (
     screenPosition: Vector3,
-    moveMode: MouseMoveMode
+    moveMode: MouseMoveMode,
+    relativeAnchor?: Vector2
 ): [boolean, string] => {
     const targetX = math.floor(screenPosition.X)
     const targetY = math.floor(screenPosition.Y)
@@ -715,33 +784,64 @@ const moveMouseToScreen = (
         return [false, "mousemoverel is not supported by current executor"]
     }
 
-    const anchor = UserInputService.GetMouseLocation()
-    const deltaX = targetX - math.floor(anchor.X)
-    const deltaY = targetY - math.floor(anchor.Y)
+    const anchor =
+        relativeAnchor ?? lastInjectedMousePosition ?? UserInputService.GetMouseLocation()
+    let deltaX = targetX - math.floor(anchor.X)
+    let deltaY = targetY - math.floor(anchor.Y)
 
-    const [didMoveRelative, moveError] = pcall(() => mousemoverel(deltaX, deltaY))
-    if (!didMoveRelative) {
-        return [false, `mousemoverel failed (${moveError})`]
+    for (let attempt = 0; attempt <= RELATIVE_MOVE_RETRY_ATTEMPTS; attempt++) {
+        const [didMoveRelative, moveError] = moveRelativeChunked(deltaX, deltaY)
+        if (!didMoveRelative) {
+            return [false, `${moveError}`]
+        }
+
+        const [arrived, offsetX, offsetY] = waitCursorArrival(targetX, targetY)
+        if (arrived) {
+            task.wait(0.02)
+            lastInjectedMousePosition = new Vector2(targetX, targetY)
+            return [true, `mouse moved(rel) to ${targetX},${targetY}`]
+        }
+
+        if (attempt >= RELATIVE_MOVE_RETRY_ATTEMPTS) {
+            return [
+                false,
+                `mousemoverel not settled (dx=${offsetX}, dy=${offsetY})`,
+            ]
+        }
+
+        deltaX = offsetX
+        deltaY = offsetY
     }
 
-    task.wait(0.02)
-    lastInjectedMousePosition = new Vector2(targetX, targetY)
-    return [true, `mouse moved(rel) to ${targetX},${targetY}`]
+    return [false, "mousemoverel not settled (unknown)"]
 }
 
 const clickContextViaMouseApi = (
-    context: ClickResolutionContext
-): [boolean, string] => {
+    context: ClickResolutionContext,
+    relativeAnchor?: Vector2
+): [boolean, string, Vector2 | undefined] => {
     const [screenPosition, pointMessage] = resolveTopVisibleScreenPoint(context)
     if (!screenPosition) {
-        return [false, `${context.phase} ${context.coordinate} failed (${pointMessage})`]
+        return [
+            false,
+            `${context.phase} ${context.coordinate} failed (${pointMessage})`,
+            undefined,
+        ]
     }
 
     const moveMode: MouseMoveMode =
         context.phase === "source" ? "absolute" : "relative"
-    const [didMove, moveMessage] = moveMouseToScreen(screenPosition, moveMode)
+    const [didMove, moveMessage] = moveMouseToScreen(
+        screenPosition,
+        moveMode,
+        relativeAnchor
+    )
     if (!didMove) {
-        return [false, `${context.phase} ${context.coordinate} failed (${moveMessage})`]
+        return [
+            false,
+            `${context.phase} ${context.coordinate} failed (${moveMessage})`,
+            undefined,
+        ]
     }
 
     task.wait(mouseClickDelaySeconds)
@@ -754,13 +854,19 @@ const clickContextViaMouseApi = (
         return [
             false,
             `${context.phase} ${context.coordinate} click failed (${clickError})`,
+            undefined,
         ]
     }
 
     task.wait(0.03)
+    const clickedPoint = new Vector2(
+        math.floor(screenPosition.X),
+        math.floor(screenPosition.Y)
+    )
     return [
         true,
         `${context.button} clicked ${context.phase} ${context.coordinate} @ screen(${math.floor(screenPosition.X)},${math.floor(screenPosition.Y)}) (${pointMessage})`,
+        clickedPoint,
     ]
 }
 
@@ -822,9 +928,8 @@ const executeMouseApi = (
         return [false, contextMessage]
     }
 
-    const [didClickFrom, fromClickMessage] = clickContextViaMouseApi(
-        clickContext.source
-    )
+    const [didClickFrom, fromClickMessage, fromClickedPoint] =
+        clickContextViaMouseApi(clickContext.source)
     if (!didClickFrom) {
         return [false, fromClickMessage]
     }
@@ -832,7 +937,8 @@ const executeMouseApi = (
     task.wait(mouseStepDelaySeconds)
 
     const [didClickTo, toClickMessage] = clickContextViaMouseApi(
-        clickContext.destination
+        clickContext.destination,
+        fromClickedPoint
     )
     if (!didClickTo) {
         return [false, toClickMessage]

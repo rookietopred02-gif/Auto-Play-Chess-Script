@@ -1,74 +1,74 @@
-# Roblox Chess Script
+# Auto-Play Chess Script
 
-Get chess moves from Stockfish and display them in Roblox.
+Roblox chess helper for [CHESS (PlaceId 6222531507)](https://www.roblox.com/games/6222531507/CHESS).
+It runs a local Stockfish server and a Rayfield client script with:
 
-While the server can be used for various purposes, the script is specifically designed for [this game](https://www.roblox.com/games/6222531507/CHESS). No other game will be supported.
-<!--
-## Announcement
+- Best-move solving from local Stockfish
+- Auto Calculate (one solve per turn)
+- Auto Play with two methods:
+  - `Remote Event`
+  - `Mouse API`
+- Per-step mouse timing controls
+- Match ID listener for remote autoplay
+- Safer FEN handling (prevents sending empty-board FEN)
 
-The next version of the server will probably be version 2.0.
+## Latest Release
 
-I'm planning on making the app a TUI (Terminal User Interface).
-Stockfish's settings should be a lot easier to change and
-you'll most likely be able to see performance and activity better
-(still working on what will be added). Feel free to open an issue
-if you have any suggestions!
--->
-## How to Run
+- Releases page:  
+  `https://github.com/rookietopred02-gif/Auto-Play-Chess-Script/releases`
+- Main loader file (`main.lua`):  
+  `https://github.com/rookietopred02-gif/Auto-Play-Chess-Script/releases/latest/download/main.lua`
+- Windows server binary (`roblox-chess-script.exe`):  
+  `https://github.com/rookietopred02-gif/Auto-Play-Chess-Script/releases/latest/download/roblox-chess-script.exe`
 
-1. **Download Stockfish**
+## Quick Start
 
-    - Get [_Stockfish_](https://stockfishchess.org/download/). The **Faster** version is recommended, but if the server doesn’t start, try the **More compatible** version.
+1. Download Stockfish from `https://stockfishchess.org/download/`.
+2. Download and run:
+   - `roblox-chess-script.exe` from the latest release.
+3. Execute this in your executor:
 
-2. **Download the Latest Release**
+```lua
+loadstring(game:HttpGet("https://github.com/rookietopred02-gif/Auto-Play-Chess-Script/releases/latest/download/main.lua"))()
+```
 
-    - Download the latest release of the script from [_here_](https://github.com/keplerHaloxx/roblox-chess-script/releases/latest/download/roblox-chess-script-windows-x64.exe).
-    - **IMPORTANT**: If the file does not exist when going to the link, wait around 5 minutes and try again. This is because an update was recently made and the file is still being uploaded.
+## In-Game UI Controls (Rayfield)
 
-3. **Run the Application**
+- `Run`: single solve.
+- `Auto Calculate`: auto solve on your turn.
+- `Auto Play`: auto execute returned move.
+- `Auto Play Method`: `Remote Event` or `Mouse API`.
+- `Select/Move Delay`: delay between first click and second move click.  
+  Range: `0.01` to `1.00` seconds.
+- `Move/Click Delay`: delay after cursor arrives and before click.  
+  Range: `0.01` to `1.00` seconds.
+- `Depth`: search depth.  
+  Range: `10` to `100`.
+- `Think Time`: max think time per solve.  
+  Range: `0.01` to `120.00` seconds.
+- `Disregard Think Time`: keep searching until depth target.
 
-    - Launch the application and follow the instructions until it indicates that the server is running.
+## Runtime Overrides
 
-4. **Execute the Script in Roblox**
+Set these globals before loading the script:
 
-    - **IMPORTANT**: Same as step 2, if you get a 404 error in Roblox console (seen by pressing F9), wait around 5 minutes and try again. Also update the server because it may be updated too.
-    - Use the following script:
+- `_G.__CHESS_SOLVER_URL` (default: `http://127.0.0.1:3000`)
+- `_G.__CHESS_SOLVER_RETRIES` (default: `1`)
 
-    ```lua
-    loadstring(game:HttpGet("https://github.com/keplerHaloxx/roblox-chess-script/releases/latest/download/main.lua"))()
-    ```
+Example:
 
-## Known Problems
-
-It seems that Solara and Xeno doesn't load Rayfield UI that well. If anyone would like to fork and have the app be with a different UI then please do so as I'm too lazy.
-
-<!-- ## Executor Compatibility
-
-If you’d like your executor added to the compatibility list, please open an [issue](https://github.com/keplerHaloxx/roblox-chess-script/issues/new/choose).
-
-| Executor | Status                  |
-| -------- | ----------------------- |
-| Wave     | ✅                      |
-| Solara   | ⚠️ UI seems to not load |
-| Others   | ❓                      |
-
-**✅ Supported**: Fully functional and tested.
-
-**⚠️ Not Fully Tested**: May work but has not been confirmed.
-
-**❓ Unknown**: Compatibility is uncertain. -->
+```lua
+_G.__CHESS_SOLVER_URL = "http://127.0.0.1:3000"
+_G.__CHESS_SOLVER_RETRIES = 2
+loadstring(game:HttpGet("https://github.com/rookietopred02-gif/Auto-Play-Chess-Script/releases/latest/download/main.lua"))()
+```
 
 ## Notes
 
-- The server is currently tested only on **Windows**.
-- If you encounter issues or would like to suggest a feature, please open an [issue](https://github.com/keplerHaloxx/roblox-chess-script/issues/new/choose). I’ll try to address them as soon as possible.
-- If you find this project useful, please consider starring the repository. ✨
-
-## Credits
-
-- The communication with Stockfish's UCI protocol is based on the [uci](https://crates.io/crates/uci) crate, with slight modifications to work with this program.
-- [bonezone2001's repo](https://github.com/bonezone2001/auto-chess-api) that this project was originally a "fork" of (currently deleted idk why i did that)
+- Target game support is only for PlaceId `6222531507`.
+- If your executor does not support `queue_on_teleport`, you must re-execute manually after teleport/rejoin.
+- If a release asset returns 404 right after publish, wait a few minutes for GitHub asset propagation.
 
 ## Disclaimer
 
-This app is intended for educational purposes only. By using it, you agree to take full responsibility for any actions or decisions made based on the app’s content. The developers assume no liability for any outcomes resulting from its use.
+For educational purposes only. You are responsible for how you use this project.

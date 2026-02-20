@@ -165,7 +165,7 @@ if (!ensure_executor_functions_access(queue_on_teleport))
     })
 else
     queue_on_teleport(
-        `loadstring(game:HttpGet("https://github.com/keplerHaloxx/roblox-chess-script/releases/latest/download/main.lua"))()`
+        `loadstring(game:HttpGet("https://github.com/rookietopred02-gif/Auto-Play-Chess-Script/releases/latest/download/main.lua"))()`
     )
 
 mainTab.CreateSection("Status")
