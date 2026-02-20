@@ -7,7 +7,6 @@ import {
 import {
     ensure_executor_functions_access,
     mouse1click,
-    mouse2click,
     mousemoveabs,
     mousemoverel,
 } from "libs/Unc"
@@ -239,6 +238,8 @@ interface MoveClickContext {
     source: ClickResolutionContext
     destination: ClickResolutionContext
 }
+
+type MouseMoveMode = "absolute" | "relative"
 
 const addUniquePoint = (points: Vector3[], point: Vector3 | undefined): void => {
     if (!point) {
@@ -686,12 +687,18 @@ const buildClickContext = (
     ]
 }
 
-const moveMouseToScreen = (screenPosition: Vector3): [boolean, string] => {
+const moveMouseToScreen = (
+    screenPosition: Vector3,
+    moveMode: MouseMoveMode
+): [boolean, string] => {
     const targetX = math.floor(screenPosition.X)
     const targetY = math.floor(screenPosition.Y)
 
-    const canUseAbsoluteMove = ensure_executor_functions_access(mousemoveabs)
-    if (canUseAbsoluteMove) {
+    if (moveMode === "absolute") {
+        if (!ensure_executor_functions_access(mousemoveabs)) {
+            return [false, "mousemoveabs is not supported by current executor"]
+        }
+
         const [didMoveAbsolute, absoluteError] = pcall(() =>
             mousemoveabs(targetX, targetY)
         )
@@ -704,7 +711,11 @@ const moveMouseToScreen = (screenPosition: Vector3): [boolean, string] => {
         return [true, `mouse moved(abs) to ${targetX},${targetY}`]
     }
 
-    const anchor = lastInjectedMousePosition ?? UserInputService.GetMouseLocation()
+    if (!ensure_executor_functions_access(mousemoverel)) {
+        return [false, "mousemoverel is not supported by current executor"]
+    }
+
+    const anchor = UserInputService.GetMouseLocation()
     const deltaX = targetX - math.floor(anchor.X)
     const deltaY = targetY - math.floor(anchor.Y)
 
@@ -726,7 +737,9 @@ const clickContextViaMouseApi = (
         return [false, `${context.phase} ${context.coordinate} failed (${pointMessage})`]
     }
 
-    const [didMove, moveMessage] = moveMouseToScreen(screenPosition)
+    const moveMode: MouseMoveMode =
+        context.phase === "source" ? "absolute" : "relative"
+    const [didMove, moveMessage] = moveMouseToScreen(screenPosition, moveMode)
     if (!didMove) {
         return [false, `${context.phase} ${context.coordinate} failed (${moveMessage})`]
     }
@@ -734,11 +747,7 @@ const clickContextViaMouseApi = (
     task.wait(mouseClickDelaySeconds)
 
     const [didClick, clickError] = pcall(() => {
-        if (context.button === "right") {
-            mouse2click()
-        } else {
-            mouse1click()
-        }
+        mouse1click()
     })
 
     if (!didClick) {
@@ -797,7 +806,7 @@ const executeMouseApi = (
     _board: Board,
     targets?: AutoPlayTargets
 ): [boolean, string] => {
-    if (!ensure_executor_functions_access(mousemoverel, mouse1click, mouse2click)) {
+    if (!ensure_executor_functions_access(mousemoveabs, mousemoverel, mouse1click)) {
         return [false, "mouse API is not supported by current executor"]
     }
 
@@ -871,7 +880,11 @@ const api: RemoteAutoplayApi = {
     },
 
     supportsMouseApi: (): boolean => {
-        return ensure_executor_functions_access(mousemoverel, mouse1click, mouse2click)
+        return ensure_executor_functions_access(
+            mousemoveabs,
+            mousemoverel,
+            mouse1click
+        )
     },
 
     setMouseStepDelaySeconds: (seconds: number) => {
