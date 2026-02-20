@@ -165,7 +165,7 @@ if (!ensure_executor_functions_access(queue_on_teleport))
     })
 else
     queue_on_teleport(
-        `loadstring(game:HttpGet("https://github.com/rookietopred02-gif/Auto-Play-Chess-Script/releases/latest/download/main.lua"))()`
+        `loadstring(game:HttpGet("https://github.com/rookietopred02-gif/Auto-Play-Chess-Script/releases/latest/download/main.lua?v=20260221"))()`
     )
 
 mainTab.CreateSection("Status")
@@ -244,10 +244,10 @@ autoPlayMethodDropdown.Set([autoPlayMethod])
 
 const mouseStepDelaySlider = mainTab.CreateSlider({
     Name: "Select/Move Delay",
-    Range: [0.01, 1],
+    Range: [0, 1],
     Increment: 0.01,
     Suffix: "s",
-    CurrentValue: 0.2,
+    CurrentValue: 0,
     Flag: "MouseStepDelaySeconds",
     Callback: (value) => {
         remoteAutoplay.setMouseStepDelaySeconds(value)
@@ -257,10 +257,10 @@ remoteAutoplay.setMouseStepDelaySeconds(mouseStepDelaySlider.CurrentValue)
 
 const mouseClickDelaySlider = mainTab.CreateSlider({
     Name: "Move/Click Delay",
-    Range: [0.01, 1],
+    Range: [0, 1],
     Increment: 0.01,
     Suffix: "s",
-    CurrentValue: 0.05,
+    CurrentValue: 0,
     Flag: "MouseClickDelaySeconds",
     Callback: (value) => {
         remoteAutoplay.setMouseClickDelaySeconds(value)

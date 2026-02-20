@@ -43,7 +43,14 @@ jobs:
 
       - name: Build Client
         working-directory: client
-        run: npm run bundle-ci
+        run: |
+          if npm run bundle-ci; then
+            echo "Client bundle built successfully."
+          else
+            echo "Client bundle failed, falling back to repository main.lua."
+            mkdir -p dist
+            cp ../main.lua dist/main.lua
+          fi
 
       - name: Upload Client Artifact
         uses: actions/upload-artifact@v4

@@ -5,82 +5,6 @@ local ImportGlobals
 
 -- Holds direct closure data (defining this before the DOM tree for line debugging etc)
 local ClosureBindings = {
-    [12] = function()local wax,script,require=ImportGlobals(12)local ImportGlobals return (function(...)-- Compiled with roblox-ts v3.0.0
-local TS = require(script.Parent.Parent.include.RuntimeLib)
-local ReplicatedStorage = TS.import(script, script.Parent.Parent, "include", "node_modules", "@rbxts", "services").ReplicatedStorage
-return function()
-	local connections = ReplicatedStorage:FindFirstChild("Connections")
-	if not connections or not connections:IsA("Folder") then
-		return nil
-	end
-	local clientError = connections:FindFirstChild("ReportClientError")
-	local _result = clientError
-	if _result ~= nil then
-		_result:Destroy()
-	end
-end
-
-end)() end,
-    [9] = function()local wax,script,require=ImportGlobals(9)local ImportGlobals return (function(...)-- Compiled with roblox-ts v3.0.0
-local function HttpGet(url, options)
-	local _result = options
-	if _result ~= nil then
-		_result = _result.retries
-	end
-	local _condition = _result
-	if _condition == nil then
-		_condition = 0
-	end
-	local retries = math.max(_condition, 0)
-	local _result_1 = options
-	if _result_1 ~= nil then
-		_result_1 = _result_1.retryDelaySeconds
-	end
-	local _condition_1 = _result_1
-	if _condition_1 == nil then
-		_condition_1 = 0.15
-	end
-	local retryDelaySeconds = _condition_1
-	local request = game
-	local lastError = "request failed"
-	do
-		local attempt = 0
-		local _shouldIncrement = false
-		while true do
-			if _shouldIncrement then
-				attempt += 1
-			else
-				_shouldIncrement = true
-			end
-			if not (attempt <= retries) then
-				break
-			end
-			local ok, resultOrError = pcall(function()
-				return request:HttpGet(url)
-			end)
-			if ok then
-				return true, resultOrError
-			end
-			lastError = tostring(resultOrError)
-			if attempt < retries then
-				task.wait(retryDelaySeconds)
-			end
-		end
-	end
-	return false, lastError
-end
-return HttpGet
-
-end)() end,
-    [24] = function()local wax,script,require=ImportGlobals(24)local ImportGlobals return (function(...)return setmetatable({}, {
-	__index = function(self, serviceName)
-		local service = game:GetService(serviceName)
-		self[serviceName] = service
-		return service
-	end,
-})
-
-end)() end,
     [3] = function()local wax,script,require=ImportGlobals(3)local ImportGlobals return (function(...)--[[
 
 	Rayfield Interface Suite
@@ -4007,649 +3931,6 @@ end)
 
 return RayfieldLibrary
 end)() end,
-    [11] = function()local wax,script,require=ImportGlobals(11)local ImportGlobals return (function(...)local mod = {
-	pieces = {
-		["Pawn"] = "p",
-		["Knight"] = "n",
-		["Bishop"] = "b",
-		["Rook"] = "r",
-		["Queen"] = "q",
-		["King"] = "k",
-	},
-}
-mod.__index = mod
-
-local lplayer = game:GetService("Players").LocalPlayer
-
----@return any[]
-function mod.getClient()
-	for _, v in pairs(getreg()) do
-		if type(v) == "function" and not iscclosure(v) then
-			for _, v in pairs(debug.getupvalues(v)) do
-				if type(v) == "table" and v.processRound then
-					return v
-				end
-			end
-		end
-	end
-end
-
----@return Instance | nil
-function mod.getPiece(tile)
-	local rayOrigin
-	local boardRoot = game:GetService("Workspace"):FindFirstChild("Board")
-	if not boardRoot then
-		return nil
-	end
-
-	local boardTile = boardRoot:FindFirstChild(tile)
-	if not boardTile then
-		return nil
-	end
-
-	if boardTile.ClassName == "Model" then
-		if boardTile:FindFirstChild("Meshes/tile_a") then
-			rayOrigin = boardTile["Meshes/tile_a"].Position
-		else
-			local tilePart = boardTile:FindFirstChild("Tile")
-			if not tilePart then
-				return nil
-			end
-			rayOrigin = tilePart.Position
-		end
-	else
-		rayOrigin = boardTile.Position
-	end
-
-	local rayDirection = Vector3.new(0, 10, 0)
-
-	local raycastResult = workspace:Raycast(rayOrigin, rayDirection)
-
-	if raycastResult ~= nil then
-		return raycastResult.Instance.Parent
-	end
-
-	return nil
-end
-
-function mod.gameInProgress()
-	return #game:GetService("Workspace").Board:GetChildren() > 0
-end
-
-function mod.new()
-	local self = setmetatable({}, mod)
-	self.client = self.getClient()
-	self.cachedBoardRef = nil
-
-	return self
-end
-
-local function findPieceAtPosition(pieceList, x, y)
-	if type(pieceList) ~= "table" then
-		return nil
-	end
-
-	for _, pieceData in pairs(pieceList) do
-		if pieceData and pieceData.position then
-			local pieceX, pieceY = pieceData.position[1], pieceData.position[2]
-			if pieceX == x and pieceY == y then
-				return pieceData
-			end
-		end
-	end
-
-	return nil
-end
-
-local function countPieces(pieceList)
-	if type(pieceList) ~= "table" then
-		return 0
-	end
-
-	local total = 0
-	for _, pieceData in pairs(pieceList) do
-		if pieceData and pieceData.position and pieceData.object then
-			total += 1
-		end
-	end
-
-	return total
-end
-
-local function hasKing(pieceList)
-	if type(pieceList) ~= "table" then
-		return false
-	end
-
-	for _, pieceData in pairs(pieceList) do
-		if pieceData and pieceData.object and pieceData.object.Name == "King" then
-			return true
-		end
-	end
-
-	return false
-end
-
-local function isUsableBoardState(boardState)
-	if type(boardState) ~= "table" then
-		return false
-	end
-	if not boardState.tiles or not boardState.players then
-		return false
-	end
-	if type(boardState.whitePieces) ~= "table" or type(boardState.blackPieces) ~= "table" then
-		return false
-	end
-	if countPieces(boardState.whitePieces) == 0 or countPieces(boardState.blackPieces) == 0 then
-		return false
-	end
-	if not hasKing(boardState.whitePieces) or not hasKing(boardState.blackPieces) then
-		return false
-	end
-
-	return true
-end
-
----@return any[] | nil
-function mod:getBoard()
-	if not self.client or type(self.client.processRound) ~= "function" then
-		self.client = self.getClient()
-	end
-
-	if not self.client or type(self.client.processRound) ~= "function" then
-		return nil
-	end
-
-	if isUsableBoardState(self.cachedBoardRef) then
-		return self.cachedBoardRef
-	end
-
-	for _, v in pairs(debug.getupvalues(self.client.processRound)) do
-		if isUsableBoardState(v) then
-			self.cachedBoardRef = v
-			return v
-		end
-	end
-
-	self.cachedBoardRef = nil
-	return nil
-end
-
----@return any[] | nil
-function mod:getRawMatch()
-	return self:getBoard()
-end
-
----@return any[] | nil
-function mod:getPieceDataAt(x, y)
-	local board = self:getBoard()
-	if not board then
-		return nil
-	end
-
-	local whitePiece = findPieceAtPosition(board.whitePieces, x, y)
-	if whitePiece then
-		return whitePiece
-	end
-
-	return findPieceAtPosition(board.blackPieces, x, y)
-end
-
----@return boolean
-function mod:isBotMatch()
-	local board = self:getBoard()
-
-	if not board or not board.players then
-		return false
-	end
-	if board.players[false] == lplayer and board.players[true] == lplayer then
-		return true
-	end
-
-	return false
-end
-
----@return "w" | "b" | nil
-function mod:getLocalTeam()
-	local board = self:getBoard()
-	if not board or not board.players then
-		return nil
-	end
-	-- Bot match detection
-	if self:isBotMatch() then
-		return "w"
-	end
-
-	for i, v in pairs(board.players) do
-		if v == lplayer then
-			-- If the index is true, they are white
-			if i then
-				return "w"
-			else
-				return "b"
-			end
-		end
-	end
-
-	return nil
-end
-
----@return boolean
-function mod:isPlayerTurn()
-	local team = self:getLocalTeam()
-	if not team then
-		return false
-	end
-
-	local guiName = if team == "w" then "White" else "Black"
-	local playerGui = lplayer:FindFirstChild("PlayerGui")
-	local gameStatus = if playerGui then playerGui:FindFirstChild("GameStatus") else nil
-	local teamGui = if gameStatus then gameStatus:FindFirstChild(guiName) else nil
-
-	if teamGui and teamGui.Visible then
-		return true
-	end
-
-	return false
-end
-
----Check if we're able to run without desyncing
----@return boolean
-function mod:willCauseDesync()
-	local board = self:getBoard()
-
-	if not board then
-		return false
-	end
-
-	local state, _ = pcall(function()
-		if self:isBotMatch() then
-			return board.activeTeam == false
-		end
-	end)
-
-	if not state then
-		return false
-	end
-
-	if not board.players then
-		return true
-	end
-
-	for i, v in pairs(board.players) do
-		if v == lplayer then
-			-- If the index is true, they are white
-			return not (board.activeTeam == i)
-		end
-	end
-
-	return true
-end
-
----Converts awful format of board table to a sensible one
----@return any[] | nil
-function mod:createBoard()
-	local board = self:getBoard()
-	if not board then
-		return nil
-	end
-
-	local newBoard = {}
-	for _, v in pairs(board.whitePieces) do
-		if v and v.position then
-			local x, y = v.position[1], v.position[2]
-			if not newBoard[x] then
-				newBoard[x] = {}
-			end
-			newBoard[x][y] = string.upper(self.pieces[v.object.Name])
-		end
-	end
-	for _, v in pairs(board.blackPieces) do
-		if v and v.position then
-			local x, y = v.position[1], v.position[2]
-			if not newBoard[x] then
-				newBoard[x] = {}
-			end
-			newBoard[x][y] = self.pieces[v.object.Name]
-		end
-	end
-
-	return newBoard
-end
-
----@return string | nil
-function mod:board2fen()
-	local board = self:createBoard()
-	if not board then
-		return nil
-	end
-
-	local result = ""
-	local boardPieces = board
-	for y = 8, 1, -1 do
-		local empty = 0
-		for x = 8, 1, -1 do
-			if not boardPieces[x] then
-				boardPieces[x] = {}
-			end
-			local piece = boardPieces[x][y]
-			if piece then
-				if empty > 0 then
-					result = result .. tostring(empty)
-					empty = 0
-				end
-				result = result .. piece
-			else
-				empty += 1
-			end
-		end
-		if empty > 0 then
-			result = result .. tostring(empty)
-		end
-		if not (y == 1) then
-			result = result .. "/"
-		end
-	end
-	if result == "8/8/8/8/8/8/8/8" then
-		return nil
-	end
-	if not string.find(result, "K", 1, true) or not string.find(result, "k", 1, true) then
-		return nil
-	end
-
-	local team = self:getLocalTeam()
-	if not team then
-		return nil
-	end
-
-	result = result .. " " .. team
-	return result
-end
-
-return mod
-
-end)() end,
-    [5] = function()local wax,script,require=ImportGlobals(5)local ImportGlobals return (function(...)-- Compiled with roblox-ts v3.0.0
-local TS = require(script.Parent.include.RuntimeLib)
-local Rayfield = TS.import(script, script.Parent, "libs", "Rayfield")
-local CoreGui = TS.import(script, script.Parent, "utils", "CoreGui")
-local findOrCreateInstance = TS.import(script, script.Parent, "utils", "findOrCreateInstance")
-local destroyErrorLogging = TS.import(script, script.Parent, "utils", "destoryErrorLogging")
-local Board = TS.import(script, script.Parent, "utils", "LuaFuncs", "board")
-local Highlighter = TS.import(script, script.Parent, "utils", "Highlighter").Highlighter
-local findBestMove = TS.import(script, script.Parent, "utils", "findBestMove")
-local remoteAutoplay = TS.import(script, script.Parent, "utils", "remoteAutoplay")
-local StarterGui = TS.import(script, script.Parent, "include", "node_modules", "@rbxts", "services").StarterGui
-local _Unc = TS.import(script, script.Parent, "libs", "Unc")
-local ensure_executor_functions_access = _Unc.ensure_executor_functions_access
-local queue_on_teleport = _Unc.queue_on_teleport
-local runtimeConfig = _G
-local _condition = runtimeConfig.__CHESS_SOLVER_URL
-if _condition == nil then
-	_condition = "http://127.0.0.1:3000"
-end
-local solverEndpoint = _condition
-local _condition_1 = runtimeConfig.__CHESS_SOLVER_RETRIES
-if _condition_1 == nil then
-	_condition_1 = 1
-end
-local solverRetries = math.max(_condition_1, 0)
-local notiBindableFunc = Instance.new("BindableFunction")
-notiBindableFunc.OnInvoke = function(buttonName)
-	if buttonName == "Join" then
-		game:GetService("TeleportService"):Teleport(6222531507)
-	end
-end
-if game.PlaceId ~= 6222531507 then
-	StarterGui:SetCore("SendNotification", {
-		Title = "Wrong Game",
-		Text = "This script is not meant for this game, press the Join button to join it",
-		Button1 = "Join",
-		Duration = 10,
-		Callback = notiBindableFunc,
-	})
-end
--- init
-Highlighter:destroyAll()
-destroyErrorLogging()
-findOrCreateInstance(CoreGui, "HighlightStorage", "Folder")
-local window = Rayfield:CreateWindow({
-	Name = "Chess",
-	LoadingTitle = "Chess ♟️",
-	LoadingSubtitle = "By Haloxx",
-	DisableBuildWarnings = true,
-	DisableRayfieldPrompts = true,
-	ConfigurationSaving = {
-		Enabled = true,
-		FolderName = "keplerHaloxx-Chess",
-		FileName = "chess-script-config",
-	},
-})
-local board = Board.new()
-local _binding = remoteAutoplay.startMatchIdListener()
-local listenerReady = _binding[1]
-local listenerMessage = _binding[2]
-local isCalculating = false
-local autoPlayMethod = "Remote Event"
-local getCurrentMatchIdText = function()
-	local currentMatchId = remoteAutoplay.getCurrentMatchId(board)
-	if currentMatchId == nil then
-		return "Current Match ID: unknown"
-	end
-	return `Current Match ID: {currentMatchId}`
-end
-local setBotStatus, setBotOutputContent, thinkTimeSlider, depthSlider, disregardTimeToggle, autoPlayToggle, matchIdLabel
-local function bestMove()
-	if isCalculating then
-		return false
-	end
-	if not Board.gameInProgress() then
-		setBotStatus("Idle")
-		setBotOutputContent("game not in progress")
-		return false
-	end
-	isCalculating = true
-	setBotStatus("Calculating")
-	local maxThinkTimeMs = math.max(math.floor(thinkTimeSlider.CurrentValue * 1000), 10)
-	local callSucceeded, outputOrError = pcall(function()
-		return findBestMove(board, depthSlider.CurrentValue, maxThinkTimeMs, disregardTimeToggle.CurrentValue, {
-			endpoint = solverEndpoint,
-			retries = solverRetries,
-		})
-	end)
-	if not callSucceeded then
-		setBotStatus("Error!")
-		setBotOutputContent(`unexpected error ({outputOrError})`)
-		isCalculating = false
-		return false
-	end
-	local output = outputOrError
-	if output[1] == false then
-		-- has errored
-		setBotStatus("Error!")
-		setBotOutputContent(output[2])
-		isCalculating = false
-		return false
-	end
-	Highlighter.new(output[3])
-	Highlighter.new(output[4])
-	local botMessage = `Received: {output[2]}`
-	if autoPlayToggle.CurrentValue then
-		local _binding_1 = remoteAutoplay.execute(output[2], board, autoPlayMethod, {
-			fromTarget = output[3],
-			toTarget = output[4],
-		})
-		local didPlay = _binding_1[1]
-		local playMessage = _binding_1[2]
-		if didPlay then
-			botMessage = `{botMessage} | AutoPlay({autoPlayMethod}): {playMessage}`
-		else
-			botMessage = `{botMessage} | AutoPlay Error({autoPlayMethod}): {playMessage}`
-		end
-	end
-	setBotOutputContent(botMessage)
-	matchIdLabel:Set(getCurrentMatchIdText())
-	-- spawn a new thread to destroy all highlights once it's no longer the players turn
-	task.spawn(function()
-		while Board.gameInProgress() and board:isPlayerTurn() do
-			task.wait(0.1)
-		end
-		Highlighter:destroyAll()
-	end)
-	setBotStatus("Idle")
-	isCalculating = false
-	return true
-end
-local mainTab = window:CreateTab("Main")
-if not ensure_executor_functions_access(queue_on_teleport) then
-	mainTab:CreateParagraph({
-		Title = "Your executor probably doesn't support queue_on_teleport()",
-		Content = `Do not worry that is OKAY but you will have to manually re-execute the script on rejoin.`,
-	})
-else
-	queue_on_teleport(`loadstring(game:HttpGet("https://github.com/rookietopred02-gif/Auto-Play-Chess-Script/releases/latest/download/main.lua"))()`)
-end
-mainTab:CreateSection("Status")
-local botStatus = ""
-local botStatusLabel = mainTab:CreateLabel("Status: Idle")
-mainTab:CreateLabel(`Solver: {solverEndpoint}`)
-mainTab:CreateLabel(`Retry Attempts: {solverRetries}`)
-matchIdLabel = mainTab:CreateLabel(getCurrentMatchIdText())
-if not listenerReady then
-	mainTab:CreateParagraph({
-		Title = "Remote Listener",
-		Content = listenerMessage,
-	})
-end
-if not remoteAutoplay.supportsMouseApi() then
-	mainTab:CreateParagraph({
-		Title = "Mouse API",
-		Content = "mouse API not supported in current executor. Auto Play (Mouse API) will fail.",
-	})
-end
-setBotStatus = function(status)
-	local stat = `Status: {status}`
-	botStatus = stat
-	botStatusLabel:Set(stat)
-	return stat
-end
-setBotStatus("Idle")
-local botOutput = mainTab:CreateParagraph({
-	Title = "Bot Output",
-	Content = "",
-})
-setBotOutputContent = function(content)
-	return botOutput:Set({
-		Title = "Bot Output",
-		Content = content,
-	})
-end
-mainTab:CreateSection("Run")
-mainTab:CreateButton({
-	Name = "Run",
-	Callback = bestMove,
-})
-local autoCalculateToggle = mainTab:CreateToggle({
-	Name = "Auto Calculate",
-	Flag = "AutoCalculate",
-	CurrentValue = false,
-	Callback = function() end,
-})
-autoPlayToggle = mainTab:CreateToggle({
-	Name = "Auto Play",
-	Flag = "AutoPlay",
-	CurrentValue = false,
-	Callback = function()
-		matchIdLabel:Set(getCurrentMatchIdText())
-	end,
-})
-local autoPlayMethodDropdown = mainTab:CreateDropdown({
-	Name = "Auto Play Method",
-	Options = { "Remote Event", "Mouse API" },
-	CurrentOption = { autoPlayMethod },
-	MultipleOptions = false,
-	Flag = "AutoPlayMethod",
-	Callback = function(options)
-		local method = options[1]
-		if method == "Mouse API" or method == "Remote Event" then
-			autoPlayMethod = method
-		else
-			autoPlayMethod = "Remote Event"
-		end
-	end,
-})
-autoPlayMethodDropdown:Set({ autoPlayMethod })
-local mouseStepDelaySlider = mainTab:CreateSlider({
-	Name = "Select/Move Delay",
-	Range = { 0.01, 1 },
-	Increment = 0.01,
-	Suffix = "s",
-	CurrentValue = 0.2,
-	Flag = "MouseStepDelaySeconds",
-	Callback = function(value)
-		remoteAutoplay.setMouseStepDelaySeconds(value)
-	end,
-})
-remoteAutoplay.setMouseStepDelaySeconds(mouseStepDelaySlider.CurrentValue)
-local mouseClickDelaySlider = mainTab:CreateSlider({
-	Name = "Move/Click Delay",
-	Range = { 0.01, 1 },
-	Increment = 0.01,
-	Suffix = "s",
-	CurrentValue = 0.05,
-	Flag = "MouseClickDelaySeconds",
-	Callback = function(value)
-		remoteAutoplay.setMouseClickDelaySeconds(value)
-	end,
-})
-remoteAutoplay.setMouseClickDelaySeconds(mouseClickDelaySlider.CurrentValue)
-task.spawn(function()
-	-- Execute once per turn while auto-calculate is enabled.
-	while true do
-		matchIdLabel:Set(getCurrentMatchIdText())
-		if autoCalculateToggle.CurrentValue and not isCalculating and Board.gameInProgress() and board:isPlayerTurn() then
-			bestMove()
-			while autoCalculateToggle.CurrentValue and Board.gameInProgress() and board:isPlayerTurn() do
-				task.wait(0.1)
-			end
-			while autoCalculateToggle.CurrentValue and Board.gameInProgress() and not board:isPlayerTurn() do
-				task.wait(0.1)
-			end
-		end
-		task.wait(0.1)
-	end
-end)
-mainTab:CreateSection("Bot Options")
--- mainTab.CreateLabel("How many moves Stockfish thinks ahead")
-depthSlider = mainTab:CreateSlider({
-	Name = "Depth",
-	Range = { 10, 100 },
-	Increment = 1,
-	Suffix = "moves",
-	CurrentValue = 17,
-	Flag = "Depth",
-	Callback = function() end,
-})
-mainTab:CreateLabel("When toggled, Stockfish will not stop thinking until it has reached the desired depth")
-disregardTimeToggle = mainTab:CreateToggle({
-	Name = "Disregard Think Time",
-	CurrentValue = false,
-	Flag = "DisregardThinkTime",
-	Callback = function() end,
-})
--- mainTab.CreateLabel("Maximum amount of time Stockfish has to think")
-thinkTimeSlider = mainTab:CreateSlider({
-	Name = "Think Time",
-	Range = { 0.01, 120 },
-	CurrentValue = 0.1,
-	Flag = "MaxThinkTimeSeconds",
-	Suffix = "s",
-	Increment = 0.01,
-	Callback = function() end,
-})
-Rayfield:LoadConfiguration()
-
-end)() end,
     [4] = function()local wax,script,require=ImportGlobals(4)local ImportGlobals return (function(...)local Module = {}
 
 -- Console
@@ -5126,8 +4407,2246 @@ end
 return Module
 
 end)() end,
+    [5] = function()local wax,script,require=ImportGlobals(5)local ImportGlobals return (function(...)-- Compiled with roblox-ts v3.0.0
+local TS = require(script.Parent.include.RuntimeLib)
+local Rayfield = TS.import(script, script.Parent, "libs", "Rayfield")
+local CoreGui = TS.import(script, script.Parent, "utils", "CoreGui")
+local findOrCreateInstance = TS.import(script, script.Parent, "utils", "findOrCreateInstance")
+local destroyErrorLogging = TS.import(script, script.Parent, "utils", "destoryErrorLogging")
+local Board = TS.import(script, script.Parent, "utils", "LuaFuncs", "board")
+local Highlighter = TS.import(script, script.Parent, "utils", "Highlighter").Highlighter
+local findBestMove = TS.import(script, script.Parent, "utils", "findBestMove")
+local remoteAutoplay = TS.import(script, script.Parent, "utils", "remoteAutoplay")
+local StarterGui = TS.import(script, script.Parent, "include", "node_modules", "@rbxts", "services").StarterGui
+local _Unc = TS.import(script, script.Parent, "libs", "Unc")
+local ensure_executor_functions_access = _Unc.ensure_executor_functions_access
+local queue_on_teleport = _Unc.queue_on_teleport
+local runtimeConfig = _G
+local _condition = runtimeConfig.__CHESS_SOLVER_URL
+if _condition == nil then
+	_condition = "http://127.0.0.1:3000"
+end
+local solverEndpoint = _condition
+local _condition_1 = runtimeConfig.__CHESS_SOLVER_RETRIES
+if _condition_1 == nil then
+	_condition_1 = 0
+end
+local solverRetries = math.max(_condition_1, 0)
+local notiBindableFunc = Instance.new("BindableFunction")
+notiBindableFunc.OnInvoke = function(buttonName)
+	if buttonName == "Join" then
+		game:GetService("TeleportService"):Teleport(6222531507)
+	end
+end
+if game.PlaceId ~= 6222531507 then
+	StarterGui:SetCore("SendNotification", {
+		Title = "Wrong Game",
+		Text = "This script is not meant for this game, press the Join button to join it",
+		Button1 = "Join",
+		Duration = 10,
+		Callback = notiBindableFunc,
+	})
+end
+-- Prevent multiple injected instances from running simultaneously.
+-- Multiple instances cause duplicate /api/solve requests and stacked highlights.
+local sharedEnv = (getgenv and getgenv()) or _G
+local __running = true
+local __generation = 0
+do
+	local prev = sharedEnv.__AUTO_PLAY_CHESS_SCRIPT
+	if type(prev) == "table" and type(prev.Stop) == "function" then
+		pcall(prev.Stop)
+	end
+	local prevGen = 0
+	if type(prev) == "table" and type(prev.Generation) == "number" then
+		prevGen = prev.Generation
+	end
+	__generation = prevGen + 1
+end
+sharedEnv.__AUTO_PLAY_CHESS_SCRIPT = {
+	Generation = __generation,
+	Stop = function()
+		__running = false
+		pcall(function()
+			Highlighter:destroyAll()
+		end)
+	end,
+}
+local function isActive()
+	local state = sharedEnv.__AUTO_PLAY_CHESS_SCRIPT
+	return __running and type(state) == "table" and state.Generation == __generation
+end
+-- init
+Highlighter:destroyAll()
+destroyErrorLogging()
+findOrCreateInstance(CoreGui, "HighlightStorage", "Folder")
+local window = Rayfield:CreateWindow({
+	Name = "Chess",
+	LoadingTitle = "Chess ♟️",
+	LoadingSubtitle = "By Haloxx",
+	DisableBuildWarnings = true,
+	DisableRayfieldPrompts = true,
+	ConfigurationSaving = {
+		Enabled = true,
+		FolderName = "keplerHaloxx-Chess",
+		FileName = "chess-script-config",
+	},
+})
+local board = Board.new()
+local _binding = remoteAutoplay.startMatchIdListener()
+local listenerReady = _binding[1]
+local listenerMessage = _binding[2]
+local isCalculating = false
+local lastSolveKey = nil
+local lastSolveAt = 0
+local SOLVE_DEBOUNCE_SECONDS = 0.75
+local solveToken = 0
+local autoPlayMethod = "Remote Event"
+local getCurrentMatchIdText = function()
+	local currentMatchId = remoteAutoplay.getCurrentMatchId(board)
+	if currentMatchId == nil then
+		return "Current Match ID: unknown"
+	end
+	return `Current Match ID: {currentMatchId}`
+end
+local setBotStatus, setBotOutputContent, thinkTimeSlider, depthSlider, disregardTimeToggle, autoPlayToggle, matchIdLabel
+local function bestMove()
+	if not isActive() then
+		return false
+	end
+	if isCalculating then
+		return false
+	end
+	if not Board.gameInProgress() then
+		setBotStatus("Idle")
+		setBotOutputContent("game not in progress")
+		return false
+	end
+	local maxThinkTimeMs = math.max(math.floor(thinkTimeSlider.CurrentValue * 1000), 10)
+	local fenSnapshot = nil
+	pcall(function()
+		fenSnapshot = board:board2fen()
+	end)
+	if type(fenSnapshot) == "string" and #fenSnapshot > 0 then
+		local solveKey = `{fenSnapshot}|{depthSlider.CurrentValue}|{maxThinkTimeMs}|{tostring(disregardTimeToggle.CurrentValue)}`
+		local now = os.clock()
+		if lastSolveKey == solveKey and (now - lastSolveAt) < SOLVE_DEBOUNCE_SECONDS then
+			setBotStatus("Idle")
+			setBotOutputContent("debounced duplicate solve request")
+			return false
+		end
+		lastSolveKey = solveKey
+		lastSolveAt = now
+	end
+	solveToken += 1
+	local myToken = solveToken
+	Highlighter:destroyAll()
+	isCalculating = true
+	setBotStatus("Calculating")
+	local callSucceeded, outputOrError = pcall(function()
+		return findBestMove(board, depthSlider.CurrentValue, maxThinkTimeMs, disregardTimeToggle.CurrentValue, {
+			endpoint = solverEndpoint,
+			retries = solverRetries,
+		})
+	end)
+	if not callSucceeded then
+		setBotStatus("Error!")
+		setBotOutputContent(`unexpected error ({outputOrError})`)
+		lastSolveAt = os.clock()
+		isCalculating = false
+		return false
+	end
+	local output = outputOrError
+	if output[1] == false then
+		-- has errored
+		setBotStatus("Error!")
+		setBotOutputContent(output[2])
+		lastSolveAt = os.clock()
+		isCalculating = false
+		return false
+	end
+	if not isActive() or myToken ~= solveToken then
+		lastSolveAt = os.clock()
+		isCalculating = false
+		return false
+	end
+	Highlighter.new(output[3])
+	Highlighter.new(output[4])
+	local botMessage = `Received: {output[2]}`
+	if autoPlayToggle.CurrentValue then
+		local _binding_1 = remoteAutoplay.execute(output[2], board, autoPlayMethod, {
+			fromTarget = output[3],
+			toTarget = output[4],
+		})
+		local didPlay = _binding_1[1]
+		local playMessage = _binding_1[2]
+		if didPlay then
+			botMessage = `{botMessage} | AutoPlay({autoPlayMethod}): {playMessage}`
+			-- Prevent next solve from starting before the move is actually applied.
+			if type(fenSnapshot) == "string" and #fenSnapshot > 0 then
+				local t0 = os.clock()
+				while os.clock() - t0 < 2 and Board.gameInProgress() do
+					local fenNow = nil
+					pcall(function()
+						fenNow = board:board2fen()
+					end)
+					if type(fenNow) == "string" and fenNow ~= fenSnapshot then
+						break
+					end
+					task.wait(0.05)
+				end
+			end
+		else
+			botMessage = `{botMessage} | AutoPlay Error({autoPlayMethod}): {playMessage}`
+		end
+	end
+	setBotOutputContent(botMessage)
+	matchIdLabel:Set(getCurrentMatchIdText())
+	-- spawn a new thread to destroy all highlights once it's no longer the players turn
+	task.spawn(function()
+		while isActive() and myToken == solveToken and Board.gameInProgress() and board:isPlayerTurn() do
+			task.wait(0.1)
+		end
+		if isActive() and myToken == solveToken then
+			Highlighter:destroyAll()
+		end
+	end)
+	setBotStatus("Idle")
+	lastSolveAt = os.clock()
+	isCalculating = false
+	return true
+end
+local mainTab = window:CreateTab("Main")
+if not ensure_executor_functions_access(queue_on_teleport) then
+	mainTab:CreateParagraph({
+		Title = "Your executor probably doesn't support queue_on_teleport()",
+		Content = `Do not worry that is OKAY but you will have to manually re-execute the script on rejoin.`,
+	})
+else
+	queue_on_teleport(`loadstring(game:HttpGet("https://github.com/rookietopred02-gif/Auto-Play-Chess-Script/releases/latest/download/main.lua?v=20260221"))()`)
+end
+mainTab:CreateSection("Status")
+local botStatus = ""
+local botStatusLabel = mainTab:CreateLabel("Status: Idle")
+mainTab:CreateLabel(`Solver: {solverEndpoint}`)
+mainTab:CreateLabel(`Retry Attempts: {solverRetries}`)
+matchIdLabel = mainTab:CreateLabel(getCurrentMatchIdText())
+if not listenerReady then
+	mainTab:CreateParagraph({
+		Title = "Remote Listener",
+		Content = listenerMessage,
+	})
+end
+if not remoteAutoplay.supportsMouseApi() then
+	mainTab:CreateParagraph({
+		Title = "Mouse API",
+		Content = "mouse API not supported in current executor. Auto Play (Mouse API) will fail.",
+	})
+end
+setBotStatus = function(status)
+	local stat = `Status: {status}`
+	botStatus = stat
+	botStatusLabel:Set(stat)
+	return stat
+end
+setBotStatus("Idle")
+local botOutput = mainTab:CreateParagraph({
+	Title = "Bot Output",
+	Content = "",
+})
+setBotOutputContent = function(content)
+	return botOutput:Set({
+		Title = "Bot Output",
+		Content = content,
+	})
+end
+mainTab:CreateSection("Run")
+mainTab:CreateButton({
+	Name = "Run",
+	Callback = bestMove,
+})
+local autoCalculateToggle = mainTab:CreateToggle({
+	Name = "Auto Calculate",
+	Flag = "AutoCalculate",
+	CurrentValue = false,
+	Callback = function() end,
+})
+autoPlayToggle = mainTab:CreateToggle({
+	Name = "Auto Play",
+	Flag = "AutoPlay",
+	CurrentValue = false,
+	Callback = function()
+		matchIdLabel:Set(getCurrentMatchIdText())
+	end,
+})
+local autoPlayMethodDropdown = mainTab:CreateDropdown({
+	Name = "Auto Play Method",
+	Options = { "Remote Event", "Mouse API" },
+	CurrentOption = { autoPlayMethod },
+	MultipleOptions = false,
+	Flag = "AutoPlayMethod",
+	Callback = function(options)
+		local method = options[1]
+		if method == "Mouse API" or method == "Remote Event" then
+			autoPlayMethod = method
+		else
+			autoPlayMethod = "Remote Event"
+		end
+	end,
+})
+autoPlayMethodDropdown:Set({ autoPlayMethod })
+local mouseStepDelaySlider = mainTab:CreateSlider({
+	Name = "Select/Move Delay",
+	Range = { 0, 1 },
+	Increment = 0.01,
+	Suffix = "s",
+	CurrentValue = 0,
+	Flag = "MouseStepDelaySeconds",
+	Callback = function(value)
+		remoteAutoplay.setMouseStepDelaySeconds(value)
+	end,
+})
+remoteAutoplay.setMouseStepDelaySeconds(mouseStepDelaySlider.CurrentValue)
+local mouseClickDelaySlider = mainTab:CreateSlider({
+	Name = "Move/Click Delay",
+	Range = { 0, 1 },
+	Increment = 0.01,
+	Suffix = "s",
+	CurrentValue = 0,
+	Flag = "MouseClickDelaySeconds",
+	Callback = function(value)
+		remoteAutoplay.setMouseClickDelaySeconds(value)
+	end,
+})
+remoteAutoplay.setMouseClickDelaySeconds(mouseClickDelaySlider.CurrentValue)
+task.spawn(function()
+	-- Execute once per turn while auto-calculate is enabled.
+	while isActive() do
+		matchIdLabel:Set(getCurrentMatchIdText())
+		if autoCalculateToggle.CurrentValue and not isCalculating and Board.gameInProgress() and board:isPlayerTurn() then
+			bestMove()
+			while isActive() and autoCalculateToggle.CurrentValue and Board.gameInProgress() and board:isPlayerTurn() do
+				task.wait(0.1)
+			end
+			while isActive() and autoCalculateToggle.CurrentValue and Board.gameInProgress() and not board:isPlayerTurn() do
+				task.wait(0.1)
+			end
+		end
+		task.wait(0.1)
+	end
+end)
+mainTab:CreateSection("Bot Options")
+-- mainTab.CreateLabel("How many moves Stockfish thinks ahead")
+depthSlider = mainTab:CreateSlider({
+	Name = "Depth",
+	Range = { 10, 100 },
+	Increment = 1,
+	Suffix = "moves",
+	CurrentValue = 17,
+	Flag = "Depth",
+	Callback = function() end,
+})
+mainTab:CreateLabel("When toggled, Stockfish will not stop thinking until it has reached the desired depth")
+disregardTimeToggle = mainTab:CreateToggle({
+	Name = "Disregard Think Time",
+	CurrentValue = false,
+	Flag = "DisregardThinkTime",
+	Callback = function() end,
+})
+-- mainTab.CreateLabel("Maximum amount of time Stockfish has to think")
+thinkTimeSlider = mainTab:CreateSlider({
+	Name = "Think Time",
+	Range = { 0.01, 120 },
+	CurrentValue = 0.1,
+	Flag = "MaxThinkTimeSeconds",
+	Suffix = "s",
+	Increment = 0.01,
+	Callback = function() end,
+})
+Rayfield:LoadConfiguration()
+
+end)() end,
     [7] = function()local wax,script,require=ImportGlobals(7)local ImportGlobals return (function(...)-- Compiled with roblox-ts v3.0.0
 return game:FindService("CoreGui")
+
+end)() end,
+    [8] = function()local wax,script,require=ImportGlobals(8)local ImportGlobals return (function(...)-- Compiled with roblox-ts v3.0.0
+local TS = require(script.Parent.Parent.include.RuntimeLib)
+local Workspace = TS.import(script, script.Parent.Parent, "include", "node_modules", "@rbxts", "services").Workspace
+local CoreGui = TS.import(script, script.Parent, "CoreGui")
+local Highlighter
+do
+	Highlighter = setmetatable({}, {
+		__tostring = function()
+			return "Highlighter"
+		end,
+	})
+	Highlighter.__index = Highlighter
+	function Highlighter.new(...)
+		local self = setmetatable({}, Highlighter)
+		return self:constructor(...) or self
+	end
+	function Highlighter:constructor(target, options)
+		local highlighterStorage = Highlighter:getStorage()
+		local _exp = highlighterStorage:GetChildren()
+		-- ▼ ReadonlyArray.forEach ▼
+		local _callback = function(child)
+			if child:IsA("Highlight") and child.Adornee == target then
+				warn("trying to highlight already highlighted object")
+				return nil
+			end
+		end
+		for _k, _v in _exp do
+			_callback(_v, _k - 1, _exp)
+		end
+		-- ▲ ReadonlyArray.forEach ▲
+		-- confusing asl but we gotta work with it
+		local _highlight = Instance.new("Highlight")
+		local _result = options
+		if _result ~= nil then
+			_result = _result.Name
+		end
+		local _condition = _result
+		if _condition == nil then
+			_condition = "Highlight"
+		end
+		_highlight.Name = _condition
+		local _result_1 = options
+		if _result_1 ~= nil then
+			_result_1 = _result_1.FillColor
+		end
+		local _condition_1 = _result_1
+		if _condition_1 == nil then
+			_condition_1 = Color3.fromRGB(59, 235, 223)
+		end
+		_highlight.FillColor = _condition_1
+		local _result_2 = options
+		if _result_2 ~= nil then
+			_result_2 = _result_2.DepthMode
+		end
+		local _condition_2 = _result_2
+		if _condition_2 == nil then
+			_condition_2 = Enum.HighlightDepthMode.AlwaysOnTop
+		end
+		_highlight.DepthMode = _condition_2
+		local _result_3 = options
+		if _result_3 ~= nil then
+			_result_3 = _result_3.FillTransparency
+		end
+		local _condition_3 = _result_3
+		if _condition_3 == nil then
+			_condition_3 = 0.5
+		end
+		_highlight.FillTransparency = _condition_3
+		local _result_4 = options
+		if _result_4 ~= nil then
+			_result_4 = _result_4.OutlineColor
+		end
+		local _condition_4 = _result_4
+		if _condition_4 == nil then
+			_condition_4 = Color3.fromRGB(255, 255, 255)
+		end
+		_highlight.OutlineColor = _condition_4
+		local _result_5 = options
+		if _result_5 ~= nil then
+			_result_5 = _result_5.OutlineTransparency
+		end
+		local _condition_5 = _result_5
+		if _condition_5 == nil then
+			_condition_5 = 0
+		end
+		_highlight.OutlineTransparency = _condition_5
+		local _result_6 = options
+		if _result_6 ~= nil then
+			_result_6 = _result_6.Parent
+		end
+		local _condition_6 = _result_6
+		if _condition_6 == nil then
+			_condition_6 = highlighterStorage
+		end
+		_highlight.Parent = _condition_6
+		_highlight.Adornee = target
+		self.highlight = _highlight
+	end
+	function Highlighter:getStorage()
+		local storage = CoreGui:FindFirstChild("HighlightStorage")
+		if not storage or not storage:IsA("Folder") then
+			local _result = storage
+			if _result ~= nil then
+				_result:Destroy()
+			end
+			local folder = Instance.new("Folder")
+			folder.Name = "HighlightStorage"
+			folder.Parent = CoreGui
+			storage = folder
+		end
+		return storage
+	end
+	function Highlighter:destroy()
+		self.highlight:Destroy()
+	end
+	function Highlighter:destory()
+		self:destroy()
+	end
+	function Highlighter:destroyAll()
+		local storage = CoreGui:FindFirstChild("HighlightStorage")
+		local _result = storage
+		if _result ~= nil then
+			_result = _result:IsA("Folder")
+		end
+		if _result then
+			local _exp = storage:GetChildren()
+			-- ▼ ReadonlyArray.forEach ▼
+			local _callback = function(child)
+				return child:Destroy()
+			end
+			for _k, _v in _exp do
+				_callback(_v, _k - 1, _exp)
+			end
+			-- ▲ ReadonlyArray.forEach ▲
+		end
+		-- Cleanup legacy highlights previously created outside HighlightStorage.
+		local _result_1 = Workspace:FindFirstChild("Board")
+		if _result_1 ~= nil then
+			local _exp = _result_1:GetDescendants()
+			-- ▼ ReadonlyArray.forEach ▼
+			local _callback = function(descendant)
+				if descendant:IsA("Highlight") then
+					descendant:Destroy()
+				end
+			end
+			for _k, _v in _exp do
+				_callback(_v, _k - 1, _exp)
+			end
+			-- ▲ ReadonlyArray.forEach ▲
+		end
+		local _result_2 = Workspace:FindFirstChild("Pieces")
+		if _result_2 ~= nil then
+			local _exp = _result_2:GetDescendants()
+			-- ▼ ReadonlyArray.forEach ▼
+			local _callback = function(descendant)
+				if descendant:IsA("Highlight") then
+					descendant:Destroy()
+				end
+			end
+			for _k, _v in _exp do
+				_callback(_v, _k - 1, _exp)
+			end
+			-- ▲ ReadonlyArray.forEach ▲
+		end
+	end
+end
+return {
+	Highlighter = Highlighter,
+}
+
+end)() end,
+    [9] = function()local wax,script,require=ImportGlobals(9)local ImportGlobals return (function(...)-- Compiled with roblox-ts v3.0.0
+local function HttpGet(url, options)
+	local _result = options
+	if _result ~= nil then
+		_result = _result.retries
+	end
+	local _condition = _result
+	if _condition == nil then
+		_condition = 0
+	end
+	local retries = math.max(_condition, 0)
+	local _result_1 = options
+	if _result_1 ~= nil then
+		_result_1 = _result_1.retryDelaySeconds
+	end
+	local _condition_1 = _result_1
+	if _condition_1 == nil then
+		_condition_1 = 0.15
+	end
+	local retryDelaySeconds = _condition_1
+	local request = game
+	local lastError = "request failed"
+	do
+		local attempt = 0
+		local _shouldIncrement = false
+		while true do
+			if _shouldIncrement then
+				attempt += 1
+			else
+				_shouldIncrement = true
+			end
+			if not (attempt <= retries) then
+				break
+			end
+			local ok, resultOrError = pcall(function()
+				return request:HttpGet(url)
+			end)
+			if ok then
+				return true, resultOrError
+			end
+			lastError = tostring(resultOrError)
+			if attempt < retries then
+				task.wait(retryDelaySeconds)
+			end
+		end
+	end
+	return false, lastError
+end
+return HttpGet
+
+end)() end,
+    [11] = function()local wax,script,require=ImportGlobals(11)local ImportGlobals return (function(...)local mod = {
+	pieces = {
+		["Pawn"] = "p",
+		["Knight"] = "n",
+		["Bishop"] = "b",
+		["Rook"] = "r",
+		["Queen"] = "q",
+		["King"] = "k",
+	},
+}
+mod.__index = mod
+
+local lplayer = game:GetService("Players").LocalPlayer
+
+---@return any[]
+function mod.getClient()
+	for _, v in pairs(getreg()) do
+		if type(v) == "function" and not iscclosure(v) then
+			for _, v in pairs(debug.getupvalues(v)) do
+				if type(v) == "table" and v.processRound then
+					return v
+				end
+			end
+		end
+	end
+end
+
+---@return Instance | nil
+function mod.getPiece(tile)
+	local rayOrigin
+	local boardRoot = game:GetService("Workspace"):FindFirstChild("Board")
+	if not boardRoot then
+		return nil
+	end
+
+	local boardTile = boardRoot:FindFirstChild(tile)
+	if not boardTile then
+		return nil
+	end
+
+	if boardTile.ClassName == "Model" then
+		if boardTile:FindFirstChild("Meshes/tile_a") then
+			rayOrigin = boardTile["Meshes/tile_a"].Position
+		else
+			local tilePart = boardTile:FindFirstChild("Tile")
+			if not tilePart then
+				return nil
+			end
+			rayOrigin = tilePart.Position
+		end
+	else
+		rayOrigin = boardTile.Position
+	end
+
+	local rayDirection = Vector3.new(0, 10, 0)
+
+	local raycastResult = workspace:Raycast(rayOrigin, rayDirection)
+
+	if raycastResult ~= nil then
+		return raycastResult.Instance.Parent
+	end
+
+	return nil
+end
+
+function mod.gameInProgress()
+	return #game:GetService("Workspace").Board:GetChildren() > 0
+end
+
+function mod.new()
+	local self = setmetatable({}, mod)
+	self.client = self.getClient()
+	self.cachedBoardRef = nil
+
+	return self
+end
+
+local function findPieceAtPosition(pieceList, x, y)
+	if type(pieceList) ~= "table" then
+		return nil
+	end
+
+	for _, pieceData in pairs(pieceList) do
+		if pieceData and pieceData.position then
+			local pieceX, pieceY = pieceData.position[1], pieceData.position[2]
+			if pieceX == x and pieceY == y then
+				return pieceData
+			end
+		end
+	end
+
+	return nil
+end
+
+local function countPieces(pieceList)
+	if type(pieceList) ~= "table" then
+		return 0
+	end
+
+	local total = 0
+	for _, pieceData in pairs(pieceList) do
+		if pieceData and pieceData.position and pieceData.object then
+			total += 1
+		end
+	end
+
+	return total
+end
+
+local function hasKing(pieceList)
+	if type(pieceList) ~= "table" then
+		return false
+	end
+
+	for _, pieceData in pairs(pieceList) do
+		if pieceData and pieceData.object and pieceData.object.Name == "King" then
+			return true
+		end
+	end
+
+	return false
+end
+
+local function isUsableBoardState(boardState)
+	if type(boardState) ~= "table" then
+		return false
+	end
+	if not boardState.tiles or not boardState.players then
+		return false
+	end
+	if type(boardState.whitePieces) ~= "table" or type(boardState.blackPieces) ~= "table" then
+		return false
+	end
+	if countPieces(boardState.whitePieces) == 0 or countPieces(boardState.blackPieces) == 0 then
+		return false
+	end
+	if not hasKing(boardState.whitePieces) or not hasKing(boardState.blackPieces) then
+		return false
+	end
+
+	return true
+end
+
+---@return any[] | nil
+function mod:getBoard()
+	if not self.client or type(self.client.processRound) ~= "function" then
+		self.client = self.getClient()
+	end
+
+	if not self.client or type(self.client.processRound) ~= "function" then
+		return nil
+	end
+
+	if isUsableBoardState(self.cachedBoardRef) then
+		return self.cachedBoardRef
+	end
+
+	for _, v in pairs(debug.getupvalues(self.client.processRound)) do
+		if isUsableBoardState(v) then
+			self.cachedBoardRef = v
+			return v
+		end
+	end
+
+	self.cachedBoardRef = nil
+	return nil
+end
+
+---@return any[] | nil
+function mod:getRawMatch()
+	return self:getBoard()
+end
+
+---@return any[] | nil
+function mod:getPieceDataAt(x, y)
+	local board = self:getBoard()
+	if not board then
+		return nil
+	end
+
+	local whitePiece = findPieceAtPosition(board.whitePieces, x, y)
+	if whitePiece then
+		return whitePiece
+	end
+
+	return findPieceAtPosition(board.blackPieces, x, y)
+end
+
+---@return boolean
+function mod:isBotMatch()
+	local board = self:getBoard()
+
+	if not board or not board.players then
+		return false
+	end
+	if board.players[false] == lplayer and board.players[true] == lplayer then
+		return true
+	end
+
+	return false
+end
+
+---@return "w" | "b" | nil
+function mod:getLocalTeam()
+	local board = self:getBoard()
+	if not board or not board.players then
+		return nil
+	end
+	-- Bot match detection
+	if self:isBotMatch() then
+		return "w"
+	end
+
+	for i, v in pairs(board.players) do
+		if v == lplayer then
+			-- If the index is true, they are white
+			if i then
+				return "w"
+			else
+				return "b"
+			end
+		end
+	end
+
+	return nil
+end
+
+---@return boolean
+function mod:isPlayerTurn()
+	local team = self:getLocalTeam()
+	if not team then
+		return false
+	end
+
+	local guiName = if team == "w" then "White" else "Black"
+	local playerGui = lplayer:FindFirstChild("PlayerGui")
+	local gameStatus = if playerGui then playerGui:FindFirstChild("GameStatus") else nil
+	local teamGui = if gameStatus then gameStatus:FindFirstChild(guiName) else nil
+
+	if teamGui and teamGui.Visible then
+		return true
+	end
+
+	return false
+end
+
+---Check if we're able to run without desyncing
+---@return boolean
+function mod:willCauseDesync()
+	local board = self:getBoard()
+
+	if not board then
+		return false
+	end
+
+	local state, _ = pcall(function()
+		if self:isBotMatch() then
+			return board.activeTeam == false
+		end
+	end)
+
+	if not state then
+		return false
+	end
+
+	if not board.players then
+		return true
+	end
+
+	for i, v in pairs(board.players) do
+		if v == lplayer then
+			-- If the index is true, they are white
+			return not (board.activeTeam == i)
+		end
+	end
+
+	return true
+end
+
+---Converts awful format of board table to a sensible one
+---@return any[] | nil
+function mod:createBoard()
+	local board = self:getBoard()
+	if not board then
+		return nil
+	end
+
+	local newBoard = {}
+	for _, v in pairs(board.whitePieces) do
+		if v and v.position then
+			local x, y = v.position[1], v.position[2]
+			if not newBoard[x] then
+				newBoard[x] = {}
+			end
+			newBoard[x][y] = string.upper(self.pieces[v.object.Name])
+		end
+	end
+	for _, v in pairs(board.blackPieces) do
+		if v and v.position then
+			local x, y = v.position[1], v.position[2]
+			if not newBoard[x] then
+				newBoard[x] = {}
+			end
+			newBoard[x][y] = self.pieces[v.object.Name]
+		end
+	end
+
+	return newBoard
+end
+
+---@return string | nil
+function mod:board2fen()
+	local board = self:createBoard()
+	if not board then
+		return nil
+	end
+
+	local result = ""
+	local boardPieces = board
+	for y = 8, 1, -1 do
+		local empty = 0
+		for x = 8, 1, -1 do
+			if not boardPieces[x] then
+				boardPieces[x] = {}
+			end
+			local piece = boardPieces[x][y]
+			if piece then
+				if empty > 0 then
+					result = result .. tostring(empty)
+					empty = 0
+				end
+				result = result .. piece
+			else
+				empty += 1
+			end
+		end
+		if empty > 0 then
+			result = result .. tostring(empty)
+		end
+		if not (y == 1) then
+			result = result .. "/"
+		end
+	end
+	if result == "8/8/8/8/8/8/8/8" then
+		return nil
+	end
+	if not string.find(result, "K", 1, true) or not string.find(result, "k", 1, true) then
+		return nil
+	end
+
+	local team = self:getLocalTeam()
+	if not team then
+		return nil
+	end
+
+	result = result .. " " .. team
+	return result
+end
+
+return mod
+
+end)() end,
+    [12] = function()local wax,script,require=ImportGlobals(12)local ImportGlobals return (function(...)-- Compiled with roblox-ts v3.0.0
+local TS = require(script.Parent.Parent.include.RuntimeLib)
+local ReplicatedStorage = TS.import(script, script.Parent.Parent, "include", "node_modules", "@rbxts", "services").ReplicatedStorage
+return function()
+	local connections = ReplicatedStorage:FindFirstChild("Connections")
+	if not connections or not connections:IsA("Folder") then
+		return nil
+	end
+	local clientError = connections:FindFirstChild("ReportClientError")
+	local _result = clientError
+	if _result ~= nil then
+		_result:Destroy()
+	end
+end
+
+end)() end,
+    [13] = function()local wax,script,require=ImportGlobals(13)local ImportGlobals return (function(...)-- Compiled with roblox-ts v3.0.0
+local TS = require(script.Parent.Parent.include.RuntimeLib)
+local _services = TS.import(script, script.Parent.Parent, "include", "node_modules", "@rbxts", "services")
+local HttpService = _services.HttpService
+local Workspace = _services.Workspace
+local HttpGet = TS.import(script, script.Parent, "HttpGet")
+local Board = TS.import(script, script.Parent, "LuaFuncs", "board")
+local getPosFromResult = TS.import(script, script.Parent, "getPosFromResult")
+local getStableFen = function(board, attempts, waitSeconds)
+	if attempts == nil then
+		attempts = 40
+	end
+	if waitSeconds == nil then
+		waitSeconds = 0.05
+	end
+	do
+		local attempt = 0
+		local _shouldIncrement = false
+		while true do
+			if _shouldIncrement then
+				attempt += 1
+			else
+				_shouldIncrement = true
+			end
+			if not (attempt < attempts) then
+				break
+			end
+			local fen = board:board2fen()
+			local _condition = fen
+			if _condition ~= "" and _condition then
+				_condition = fen ~= "8/8/8/8/8/8/8/8 w" and fen ~= "8/8/8/8/8/8/8/8 b"
+			end
+			if _condition ~= "" and _condition then
+				return fen
+			end
+			task.wait(waitSeconds)
+		end
+	end
+	return nil
+end
+--[[
+	*
+	 * Does a ton of checks and gets the best move
+	 
+]]
+return function(board, depth, maxThinkTime, disregardThinkTime, options)
+	if not board:isPlayerTurn() then
+		return { false, "not your turn" }
+	end
+	if board:willCauseDesync() then
+		-- Keep compatibility with previous behavior: this check is advisory only.
+		warn("board sync check reported a potential desync risk")
+	end
+	local fen = getStableFen(board)
+	if not (fen ~= "" and fen) then
+		return { false, "board not ready (fen unavailable)" }
+	end
+	local _result = options
+	if _result ~= nil then
+		_result = _result.endpoint
+	end
+	local _condition = _result
+	if _condition == nil then
+		_condition = "http://127.0.0.1:3000"
+	end
+	local endpoint = _condition
+	local _exp = `{endpoint}/api/solve?fen={HttpService:UrlEncode(fen)}&depth={depth}&max_think_time={maxThinkTime}&disregard_think_time={disregardThinkTime}&_q={math.floor(os.clock() * 1000)}`
+	local _object = {}
+	local _left = "retries"
+	local _result_1 = options
+	if _result_1 ~= nil then
+		_result_1 = _result_1.retries
+	end
+	local _condition_1 = _result_1
+	if _condition_1 == nil then
+		_condition_1 = 1
+	end
+	_object[_left] = _condition_1
+	local requestSucceeded, response = HttpGet(_exp, _object)
+	if not requestSucceeded then
+		return { false, `no response from server ({response})` }
+	end
+	local decodeSucceeded, decodedOrError = pcall(function()
+		return HttpService:JSONDecode(response)
+	end)
+	if not decodeSucceeded then
+		return { false, `invalid server response ({decodedOrError})` }
+	end
+	local data = decodedOrError
+	local successValue = data.success
+	local resultValue = data.result
+	if type(successValue) ~= "boolean" or type(resultValue) ~= "string" then
+		return { false, "invalid server payload" }
+	end
+	local success = successValue
+	local move = resultValue
+	if #move == 0 then
+		return { false, "invalid server payload" }
+	end
+	if not success then
+		return { false, move }
+	end
+	if not { string.match(move, "^[a-h][1-8][a-h][1-8]$") } then
+		return { false, `invalid move format ({move})` }
+	end
+	local x1, y1, x2, y2 = getPosFromResult(move)
+	local pieceToMove = Board.getPiece(tostring(tostring(x1) .. "," .. tostring(y1)))
+	if not pieceToMove then
+		return { false, "no piece to move" }
+	end
+	local _placeToMove = Workspace:FindFirstChild("Board")
+	if _placeToMove ~= nil then
+		_placeToMove = _placeToMove:FindFirstChild(tostring(tostring(x2) .. "," .. tostring(y2)))
+	end
+	local placeToMove = _placeToMove
+	if not placeToMove then
+		return { false, "no place to move to" }
+	end
+	return { true, move, pieceToMove, placeToMove }
+end
+
+end)() end,
+    [14] = function()local wax,script,require=ImportGlobals(14)local ImportGlobals return (function(...)-- Compiled with roblox-ts v3.0.0
+local function findOrCreateInstance(parent, child, instance)
+	if parent:FindFirstChild(child) then
+		return parent
+	end
+	local new_instance = Instance.new(instance)
+	new_instance.Name = child
+	new_instance.Parent = parent
+	return new_instance
+end
+return findOrCreateInstance
+
+end)() end,
+    [15] = function()local wax,script,require=ImportGlobals(15)local ImportGlobals return (function(...)-- Compiled with roblox-ts v3.0.0
+return function(result)
+	if #result ~= 4 then
+		error(`invalid stockfish move length: {result}`)
+	end
+	local fileToX = function(file)
+		local bytes = { string.byte(file) }
+		local byteValue = bytes[1]
+		if byteValue < 97 or byteValue > 104 then
+			error(`invalid file value in stockfish move: {result}`)
+		end
+		return 9 - (byteValue - 96)
+	end
+	local rankToY = function(rank)
+		local parsedRank = tonumber(rank)
+		if parsedRank == nil or parsedRank < 1 or parsedRank > 8 then
+			error(`invalid rank value in stockfish move: {result}`)
+		end
+		return parsedRank
+	end
+	local x1 = fileToX(string.sub(result, 1, 1))
+	local y1 = rankToY(string.sub(result, 2, 2))
+	local x2 = fileToX(string.sub(result, 3, 3))
+	local y2 = rankToY(string.sub(result, 4, 4))
+	return x1, y1, x2, y2
+end
+
+end)() end,
+    [16] = function()local wax,script,require=ImportGlobals(16)local ImportGlobals return (function(...)-- Compiled with roblox-ts v3.0.0
+local TS = require(script.Parent.Parent.include.RuntimeLib)
+local _services = TS.import(script, script.Parent.Parent, "include", "node_modules", "@rbxts", "services")
+local Debris = _services.Debris
+local Players = _services.Players
+local ReplicatedStorage = _services.ReplicatedStorage
+local UserInputService = _services.UserInputService
+local Workspace = _services.Workspace
+local _Unc = TS.import(script, script.Parent.Parent, "libs", "Unc")
+local ensure_executor_functions_access = _Unc.ensure_executor_functions_access
+local mouse1click = _Unc.mouse1click
+local mousemoveabs = _Unc.mousemoveabs
+local mousemoverel = _Unc.mousemoverel
+local Board = TS.import(script, script.Parent, "LuaFuncs", "board")
+local getPosFromResult = TS.import(script, script.Parent, "getPosFromResult")
+local lastMatchId
+local hasStartedListener = false
+local mouseStepDelaySeconds = 0
+local mouseClickDelaySeconds = 0
+local getConnectionsFolder = function()
+	local connections = ReplicatedStorage:FindFirstChild("Connections")
+	if not connections or not connections:IsA("Folder") then
+		return nil
+	end
+	return connections
+end
+local parseNumber = function(value)
+	if type(value) ~= "number" then
+		return nil
+	end
+	return value
+end
+local updateMatchIdFromBoard = function(board)
+	if not board then
+		return lastMatchId
+	end
+	local rawMatch = board:getRawMatch()
+	if not rawMatch then
+		return lastMatchId
+	end
+	local boardMatchId = parseNumber(rawMatch.id)
+	if boardMatchId ~= nil then
+		lastMatchId = boardMatchId
+	end
+	return lastMatchId
+end
+local resolveDoubleStep = function(pieceData)
+	if type(pieceData) ~= "table" then
+		return 0
+	end
+	local piece = pieceData
+	local _condition = parseNumber(piece.doubleStep)
+	if _condition == nil then
+		_condition = parseNumber(piece.doublestep)
+	end
+	local directDoubleStep = _condition
+	if directDoubleStep ~= nil then
+		return directDoubleStep
+	end
+	local position = piece.position
+	if position and type(position) == "table" then
+		local _condition_1 = parseNumber(position.doubleStep)
+		if _condition_1 == nil then
+			_condition_1 = parseNumber(position.doublestep)
+			if _condition_1 == nil then
+				_condition_1 = parseNumber(position[3])
+			end
+		end
+		local positionDoubleStep = _condition_1
+		if positionDoubleStep ~= nil then
+			return positionDoubleStep
+		end
+	end
+	return 0
+end
+local getPieceName = function(pieceData)
+	if type(pieceData) ~= "table" then
+		return nil
+	end
+	local piece = pieceData
+	local pieceObject = piece.object
+	if not pieceObject then
+		return nil
+	end
+	return pieceObject.Name
+end
+local getMovePieceEvent = function()
+	local connections = getConnectionsFolder()
+	if not connections then
+		return nil
+	end
+	local movePiece = connections:FindFirstChild("MovePiece")
+	if not movePiece or not movePiece:IsA("RemoteEvent") then
+		return nil
+	end
+	return movePiece
+end
+local getTileInstance = function(x, y)
+	local boardRoot = Workspace:FindFirstChild("Board")
+	if not boardRoot then
+		return nil
+	end
+	return boardRoot:FindFirstChild(`{x},{y}`)
+end
+local findFirstBasePart = function(target)
+	if target:IsA("BasePart") then
+		return target
+	end
+	local descendants = target:GetDescendants()
+	for _, descendant in descendants do
+		if descendant:IsA("BasePart") then
+			return descendant
+		end
+	end
+	return nil
+end
+local getInstanceWorldPosition = function(target)
+	if target:IsA("Attachment") then
+		return target.WorldPosition
+	end
+	if target:IsA("BasePart") then
+		return target.Position
+	end
+	if target:IsA("Model") then
+		local primaryPart = target.PrimaryPart
+		if primaryPart then
+			return primaryPart.Position
+		end
+		local meshesFolder = target:FindFirstChild("Meshes")
+		local _meshTile = meshesFolder
+		if _meshTile ~= nil then
+			_meshTile = _meshTile:FindFirstChild("tile_a")
+		end
+		local meshTile = _meshTile
+		if meshTile and meshTile:IsA("BasePart") then
+			return meshTile.Position
+		end
+		local tilePart = target:FindFirstChild("Tile")
+		if tilePart and tilePart:IsA("BasePart") then
+			return tilePart.Position
+		end
+		local firstPart = findFirstBasePart(target)
+		if firstPart then
+			return firstPart.Position
+		end
+		local canReadBoundingBox, modelCFrameOrError = pcall(function()
+			local modelCFrame = target:GetBoundingBox()
+			return modelCFrame
+		end)
+		if canReadBoundingBox then
+			return modelCFrameOrError.Position
+		end
+		return nil
+	end
+	local nestedPart = findFirstBasePart(target)
+	if nestedPart then
+		return nestedPart.Position
+	end
+	return nil
+end
+local CLICK_RAY_DISTANCE = 2048
+local TILE_SAMPLE_GRID_HIGH = 11
+local TILE_SAMPLE_MARGIN = 0.08
+local TILE_SAMPLE_HEIGHT_OFFSET = 0.08
+local DEBUG_POINT_MARKER_SIZE = 0.1
+local DEBUG_POINT_MARKER_LIFETIME_SECONDS = 6
+local DEBUG_POINT_MARKER_WORLD_OFFSET_Y = 0
+local DEBUG_POINT_MARKER_PIXEL_SIZE = 18
+local MOUSE_ALIGN_MAX_ATTEMPTS = 12
+local ABSOLUTE_ALIGN_ATTEMPTS = 4
+local mouseAbsCoordMode = nil -- "screen" | "viewport"
+local addUniquePoint = function(points, point)
+	if not point then
+		return nil
+	end
+	for _, existing in points do
+		local _point = point
+		if (existing - _point).Magnitude < 0.001 then
+			return nil
+		end
+	end
+	local _points = points
+	local _point = point
+	table.insert(_points, _point)
+end
+local worldPointFromOffset = function(base, offset)
+	local _position = base.Position
+	local _rightVector = base.RightVector
+	local _x = offset.X
+	local _upVector = base.UpVector
+	local _y = offset.Y
+	local _lookVector = base.LookVector
+	local _z = offset.Z
+	return _position + (_rightVector * _x) + (_upVector * _y) + (_lookVector * _z)
+end
+local addPartSamplePoints = function(points, part)
+	local half = part.Size * 0.5
+	local xOffset = math.max(half.X * 0.4, 0.05)
+	local yOffset = math.max(half.Y * 0.9, 0.05)
+	local zOffset = math.max(half.Z * 0.4, 0.05)
+	local offsets = { Vector3.new(0, yOffset, 0), Vector3.new(0, 0, 0), Vector3.new(xOffset, yOffset * 0.75, 0), Vector3.new(-xOffset, yOffset * 0.75, 0), Vector3.new(0, yOffset * 0.75, zOffset), Vector3.new(0, yOffset * 0.75, -zOffset) }
+	for _, offset in offsets do
+		addUniquePoint(points, worldPointFromOffset(part.CFrame, offset))
+	end
+end
+local resolveTileBasePart = function(tile)
+	if tile:IsA("BasePart") then
+		return tile
+	end
+	if tile:IsA("Model") then
+		local meshTile = tile:FindFirstChild("Meshes/tile_a")
+		if meshTile and meshTile:IsA("BasePart") then
+			return meshTile
+		end
+		local tilePart = tile:FindFirstChild("Tile")
+		if tilePart and tilePart:IsA("BasePart") then
+			return tilePart
+		end
+		if tile.PrimaryPart then
+			return tile.PrimaryPart
+		end
+	end
+	return findFirstBasePart(tile)
+end
+local pushUniqueInstance = function(instances, candidate)
+	if not candidate then
+		return nil
+	end
+	for _, existing in instances do
+		if existing == candidate then
+			return nil
+		end
+	end
+	local _instances = instances
+	local _candidate = candidate
+	table.insert(_instances, _candidate)
+end
+local isAllowedTopHit = function(hit, allowed)
+	for _, allowedInstance in allowed do
+		if hit == allowedInstance or hit:IsDescendantOf(allowedInstance) then
+			return true
+		end
+	end
+	return false
+end
+local getDebugPointStorage = function()
+	local existing = Workspace:FindFirstChild("AutoPlayDebugPoints")
+	if existing and existing:IsA("Folder") then
+		return existing
+	end
+	local folder = Instance.new("Folder")
+	folder.Name = "AutoPlayDebugPoints"
+	folder.Parent = Workspace
+	return folder
+end
+local createDebugPointMarker = function(worldPoint, phase)
+	local markerColor = if phase == "source" then Color3.fromRGB(24, 255, 170) else Color3.fromRGB(255, 166, 46)
+	local marker = Instance.new("Part")
+	marker.Name = if phase == "source" then "AutoPlaySourcePoint" else "AutoPlayDestinationPoint"
+	marker.Shape = Enum.PartType.Ball
+	marker.Material = Enum.Material.SmoothPlastic
+	marker.Color = markerColor
+	marker.Size = Vector3.new(DEBUG_POINT_MARKER_SIZE, DEBUG_POINT_MARKER_SIZE, DEBUG_POINT_MARKER_SIZE)
+	marker.Transparency = 1
+	marker.Anchored = true
+	marker.CanCollide = false
+	marker.CanTouch = false
+	marker.CanQuery = false
+	marker.CastShadow = false
+	local _worldPoint = worldPoint
+	marker.CFrame = CFrame.new(_worldPoint)
+	marker.Parent = getDebugPointStorage()
+	local billboard = Instance.new("BillboardGui")
+	billboard.Name = "DebugPoint"
+	billboard.AlwaysOnTop = true
+	billboard.LightInfluence = 0
+	billboard.ResetOnSpawn = false
+	billboard.Size = UDim2.fromOffset(DEBUG_POINT_MARKER_PIXEL_SIZE, DEBUG_POINT_MARKER_PIXEL_SIZE)
+	billboard.Parent = marker
+	local dot = Instance.new("Frame")
+	dot.Name = "Dot"
+	dot.AnchorPoint = Vector2.new(0.5, 0.5)
+	dot.Position = UDim2.fromScale(0.5, 0.5)
+	dot.Size = UDim2.fromScale(1, 1)
+	dot.BackgroundColor3 = markerColor
+	dot.BorderSizePixel = 0
+	dot.Parent = billboard
+	local dotCorner = Instance.new("UICorner")
+	dotCorner.CornerRadius = UDim.new(1, 0)
+	dotCorner.Parent = dot
+	local dotStroke = Instance.new("UIStroke")
+	dotStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	dotStroke.Thickness = 2
+	dotStroke.Color = if phase == "source" then Color3.fromRGB(0, 70, 50) else Color3.fromRGB(92, 56, 0)
+	dotStroke.Parent = dot
+	Debris:AddItem(marker, DEBUG_POINT_MARKER_LIFETIME_SECONDS)
+end
+local resolveMoveTargetFromCalculatedPoint = function(resolvedPoint)
+	local fallbackX = math.round(resolvedPoint.screen.X)
+	local fallbackY = math.round(resolvedPoint.screen.Y)
+	local camera = Workspace.CurrentCamera
+	if camera then
+		local markerWorldPoint = resolvedPoint.world
+		local markerScreenPoint, screenVisible = camera:WorldToScreenPoint(markerWorldPoint)
+		local markerViewportPoint, viewportVisible = camera:WorldToViewportPoint(markerWorldPoint)
+		if screenVisible or viewportVisible then
+			return {
+				screenX = math.round(markerScreenPoint.X),
+				screenY = math.round(markerScreenPoint.Y),
+				viewportX = math.round(markerViewportPoint.X),
+				viewportY = math.round(markerViewportPoint.Y),
+			}, "marker-projected"
+		end
+	end
+	return {
+		screenX = fallbackX,
+		screenY = fallbackY,
+		viewportX = fallbackX,
+		viewportY = fallbackY,
+	}, "resolved-screen-fallback"
+end
+local generateTileTopSamples = function(part, density)
+	local points = {}
+	local gridSize = if density == "high" then TILE_SAMPLE_GRID_HIGH else TILE_SAMPLE_GRID_HIGH
+	local normalizedRange = 1 - TILE_SAMPLE_MARGIN * 2
+	local topOffsetY = part.Size.Y * 0.5 + TILE_SAMPLE_HEIGHT_OFFSET
+	for gridX = 0, gridSize - 1 do
+		local normalizedX = TILE_SAMPLE_MARGIN + (gridX / (gridSize - 1)) * normalizedRange
+		local localX = (normalizedX - 0.5) * part.Size.X
+		for gridZ = 0, gridSize - 1 do
+			local normalizedZ = TILE_SAMPLE_MARGIN + (gridZ / (gridSize - 1)) * normalizedRange
+			local localZ = (normalizedZ - 0.5) * part.Size.Z
+			local centerDistanceSq = (normalizedX - 0.5) ^ 2 + (normalizedZ - 0.5) ^ 2
+			local _arg0 = {
+				point = worldPointFromOffset(part.CFrame, Vector3.new(localX, topOffsetY, localZ)),
+				distanceToCenter = centerDistanceSq,
+			}
+			table.insert(points, _arg0)
+		end
+	end
+	table.sort(points, function(a, b)
+		return a.distanceToCenter < b.distanceToCenter
+	end)
+	local orderedPoints = {}
+	for _, entry in points do
+		local _point = entry.point
+		table.insert(orderedPoints, _point)
+	end
+	return orderedPoints
+end
+local getModelBoundingBox = function(target)
+	local hasBoundingBox, resultOrError = pcall(function()
+		local cframe, size = target:GetBoundingBox()
+		return { cframe, size }
+	end)
+	if not hasBoundingBox then
+		return nil
+	end
+	return resultOrError
+end
+local addBoundingBoxSamplePoints = function(points, boundingBox)
+	local _binding = boundingBox
+	local boxCFrame = _binding[1]
+	local boxSize = _binding[2]
+	local half = boxSize * 0.5
+	local xOffset = math.max(half.X * 0.45, 0.05)
+	local yOffset = math.max(half.Y * 0.95, 0.05)
+	local zOffset = math.max(half.Z * 0.45, 0.05)
+	local offsets = { Vector3.new(0, yOffset, 0), Vector3.new(0, 0, 0), Vector3.new(xOffset, yOffset * 0.7, zOffset), Vector3.new(-xOffset, yOffset * 0.7, zOffset), Vector3.new(xOffset, yOffset * 0.7, -zOffset), Vector3.new(-xOffset, yOffset * 0.7, -zOffset) }
+	for _, offset in offsets do
+		addUniquePoint(points, worldPointFromOffset(boxCFrame, offset))
+	end
+end
+local generatePieceSurfaceSamples = function(target)
+	local points = {}
+	addUniquePoint(points, getInstanceWorldPosition(target))
+	if target:IsA("Attachment") then
+		local _worldPosition = target.WorldPosition
+		local _vector3 = Vector3.new(0, 0.05, 0)
+		addUniquePoint(points, _worldPosition + _vector3)
+		return points
+	end
+	if target:IsA("BasePart") then
+		addPartSamplePoints(points, target)
+		return points
+	end
+	if target:IsA("Model") then
+		local primaryPart = target.PrimaryPart
+		if primaryPart then
+			addPartSamplePoints(points, primaryPart)
+		end
+		local boundingBox = getModelBoundingBox(target)
+		if boundingBox then
+			addBoundingBoxSamplePoints(points, boundingBox)
+		end
+		local sampledParts = 0
+		for _, descendant in target:GetDescendants() do
+			if not descendant:IsA("BasePart") then
+				continue
+			end
+			addPartSamplePoints(points, descendant)
+			sampledParts += 1
+			if sampledParts >= 6 then
+				break
+			end
+		end
+		return points
+	end
+	local fallbackPart = findFirstBasePart(target)
+	if fallbackPart then
+		addPartSamplePoints(points, fallbackPart)
+	end
+	return points
+end
+local buildClickRaycastParams = function()
+	local raycastParams = RaycastParams.new()
+	raycastParams.FilterType = Enum.RaycastFilterType.Exclude
+	raycastParams.IgnoreWater = true
+	local ignoreList = {}
+	local localCharacter = Players.LocalPlayer.Character
+	if localCharacter then
+		table.insert(ignoreList, localCharacter)
+	end
+	raycastParams.FilterDescendantsInstances = ignoreList
+	return raycastParams
+end
+local pickInteriorSampleHitPoint = function(points)
+	if #points == 1 then
+		return points[1]
+	end
+	local centroidX = 0
+	local centroidY = 0
+	for _, point in points do
+		centroidX += point.screen.X
+		centroidY += point.screen.Y
+	end
+	local pointCount = #points
+	centroidX /= pointCount
+	centroidY /= pointCount
+	local bestPoint = points[1]
+	local bestDistance = math.huge
+	for _, point in points do
+		local deltaX = point.screen.X - centroidX
+		local deltaY = point.screen.Y - centroidY
+		local distance = deltaX * deltaX + deltaY * deltaY
+		if distance < bestDistance then
+			bestDistance = distance
+			bestPoint = point
+		end
+	end
+	return bestPoint
+end
+local resolveTopVisiblePointFromSamples = function(camera, worldPoints, allowedHits, raycastParams, stageName)
+	if #worldPoints == 0 then
+		return { nil, `{stageName}: no candidate points` }
+	end
+	local visibleSampleCount = 0
+	local topHitPoints = {}
+	local firstBlockingHit
+	for _, worldPoint in worldPoints do
+		local screenPoint, isVisible = camera:WorldToScreenPoint(worldPoint)
+		if not isVisible then
+			continue
+		end
+		visibleSampleCount += 1
+		local ray = camera:ScreenPointToRay(screenPoint.X, screenPoint.Y)
+		local hit = Workspace:Raycast(ray.Origin, ray.Direction * CLICK_RAY_DISTANCE, raycastParams)
+		if not hit or not hit.Instance then
+			continue
+		end
+		if not isAllowedTopHit(hit.Instance, allowedHits) then
+			if not (firstBlockingHit ~= "" and firstBlockingHit) then
+				firstBlockingHit = hit.Instance:GetFullName()
+			end
+			continue
+		end
+		local resolvedScreenPoint = screenPoint
+		local hitScreenPoint, hitVisible = camera:WorldToScreenPoint(hit.Position)
+		if hitVisible then
+			resolvedScreenPoint = hitScreenPoint
+		end
+		local _arg0 = {
+			screen = Vector3.new(resolvedScreenPoint.X, resolvedScreenPoint.Y, resolvedScreenPoint.Z),
+			world = hit.Position,
+		}
+		table.insert(topHitPoints, _arg0)
+	end
+	if #topHitPoints > 0 then
+		local interiorPoint = pickInteriorSampleHitPoint(topHitPoints)
+		return { interiorPoint, `{stageName}: {#topHitPoints} visible top-hit points` }
+	end
+	if visibleSampleCount == 0 then
+		return { nil, `{stageName}: no visible sample point` }
+	end
+	if firstBlockingHit ~= "" and firstBlockingHit then
+		return { nil, `{stageName}: blocked by {firstBlockingHit}` }
+	end
+	return { nil, `{stageName}: no topmost hit` }
+end
+local resolveTopVisibleScreenPoint = function(context)
+	local camera = Workspace.CurrentCamera
+	if not camera then
+		return { nil, `{context.phase} {context.coordinate}: no current camera` }
+	end
+	local raycastParams = buildClickRaycastParams()
+	local tileStage = `{context.phase} {context.coordinate} tile-sampling`
+	local tileSamples = generateTileTopSamples(context.tilePart, "high")
+	local _binding = resolveTopVisiblePointFromSamples(camera, tileSamples, context.allowedHits, raycastParams, tileStage)
+	local tileScreenPoint = _binding[1]
+	local tileReason = _binding[2]
+	if tileScreenPoint then
+		return { tileScreenPoint, tileReason }
+	end
+	if not context.allowPieceSamplingFallback or not context.piece then
+		return { nil, `{context.phase} {context.coordinate}: {tileReason}` }
+	end
+	local pieceSamples = generatePieceSurfaceSamples(context.piece)
+	local pieceStage = `{context.phase} {context.coordinate} piece-sampling`
+	local _binding_1 = resolveTopVisiblePointFromSamples(camera, pieceSamples, context.allowedHits, raycastParams, pieceStage)
+	local pieceScreenPoint = _binding_1[1]
+	local pieceReason = _binding_1[2]
+	if pieceScreenPoint then
+		return { pieceScreenPoint, pieceReason }
+	end
+	return { nil, `{context.phase} {context.coordinate}: {tileReason}; {pieceReason}` }
+end
+local buildClickContext = function(fromX, fromY, toX, toY, targets)
+	local sourceCoordinate = `{fromX},{fromY}`
+	local sourceTile = getTileInstance(fromX, fromY)
+	if not sourceTile then
+		return { nil, `source {sourceCoordinate}: tile not found` }
+	end
+	local sourceTilePart = resolveTileBasePart(sourceTile)
+	if not sourceTilePart then
+		return { nil, `source {sourceCoordinate}: tile base part not found` }
+	end
+	local _result = targets
+	if _result ~= nil then
+		_result = _result.fromTarget
+	end
+	local _condition = _result
+	if _condition == nil then
+		_condition = Board.getPiece(sourceCoordinate)
+	end
+	local sourcePiece = _condition
+	if not sourcePiece then
+		return { nil, `source {sourceCoordinate}: piece not found` }
+	end
+	local sourceAllowedHits = {}
+	pushUniqueInstance(sourceAllowedHits, sourcePiece)
+	pushUniqueInstance(sourceAllowedHits, sourceTile)
+	local destinationCoordinate = `{toX},{toY}`
+	local _condition_1 = getTileInstance(toX, toY)
+	if _condition_1 == nil then
+		local _result_1 = targets
+		if _result_1 ~= nil then
+			_result_1 = _result_1.toTarget
+		end
+		_condition_1 = _result_1
+	end
+	local destinationTile = _condition_1
+	if not destinationTile then
+		return { nil, `destination {destinationCoordinate}: tile not found` }
+	end
+	local destinationTilePart = resolveTileBasePart(destinationTile)
+	if not destinationTilePart then
+		return { nil, `destination {destinationCoordinate}: tile base part not found` }
+	end
+	local destinationPiece = Board.getPiece(destinationCoordinate)
+	local destinationAllowedHits = {}
+	if destinationPiece then
+		pushUniqueInstance(destinationAllowedHits, destinationPiece)
+	end
+	pushUniqueInstance(destinationAllowedHits, destinationTile)
+	local sourceContext = {
+		phase = "source",
+		coordinate = sourceCoordinate,
+		tile = sourceTile,
+		tilePart = sourceTilePart,
+		piece = sourcePiece,
+		button = "left",
+		allowedHits = sourceAllowedHits,
+		allowPieceSamplingFallback = true,
+	}
+	local destinationContext = {
+		phase = "destination",
+		coordinate = destinationCoordinate,
+		tile = destinationTile,
+		tilePart = destinationTilePart,
+		piece = destinationPiece,
+		button = "left",
+		allowedHits = destinationAllowedHits,
+		allowPieceSamplingFallback = false,
+	}
+	return { {
+		source = sourceContext,
+		destination = destinationContext,
+	}, "ok" }
+end
+local getCurrentCursorPosition = function()
+	local cursor = UserInputService:GetMouseLocation()
+	return Vector2.new(math.round(cursor.X), math.round(cursor.Y))
+end
+local moveAbsoluteToTarget = function(target)
+	local cursorAfterMove = getCurrentCursorPosition()
+	local tryMode = function(mode)
+		local commandX = if mode == "viewport" then target.viewportX else target.screenX
+		local commandY = if mode == "viewport" then target.viewportY else target.screenY
+		local didMoveAbsolute, moveError = pcall(function()
+			return mousemoveabs(commandX, commandY)
+		end)
+		if not didMoveAbsolute then
+			return false, `mousemoveabs failed ({moveError})`, nil, nil
+		end
+		task.wait()
+		cursorAfterMove = getCurrentCursorPosition()
+		local dx = math.round(target.screenX - cursorAfterMove.X)
+		local dy = math.round(target.screenY - cursorAfterMove.Y)
+		return true, `mouse moved(abs/{mode}) target={target.screenX},{target.screenY} cmd={commandX},{commandY} dx={dx} dy={dy}`, {
+			dx = dx,
+			dy = dy,
+			cursor = cursorAfterMove,
+			score = math.abs(dx) + math.abs(dy),
+		}, mode
+	end
+
+	if mouseAbsCoordMode == nil then
+		local okScreen, msgScreen, stateScreen, modeScreen = tryMode("screen")
+		local okViewport, msgViewport, stateViewport, modeViewport = tryMode("viewport")
+		if okScreen and okViewport then
+			-- Keep the cursor at the chosen mode: if we choose screen but viewport ran last, re-run screen once.
+			if stateViewport.score < stateScreen.score then
+				mouseAbsCoordMode = modeViewport
+				return { true, msgViewport, stateViewport.dx, stateViewport.dy, stateViewport.cursor }
+			end
+			mouseAbsCoordMode = modeScreen
+			local okScreen2, msgScreen2, stateScreen2 = tryMode(modeScreen)
+			if okScreen2 then
+				return { true, msgScreen2, stateScreen2.dx, stateScreen2.dy, stateScreen2.cursor }
+			end
+			return { true, msgScreen, stateScreen.dx, stateScreen.dy, stateScreen.cursor }
+		end
+		if okScreen then
+			mouseAbsCoordMode = modeScreen
+			return { true, msgScreen, stateScreen.dx, stateScreen.dy, stateScreen.cursor }
+		end
+		if okViewport then
+			mouseAbsCoordMode = modeViewport
+			return { true, msgViewport, stateViewport.dx, stateViewport.dy, stateViewport.cursor }
+		end
+		return { false, `abs move failed in both modes (screen: {msgScreen}; viewport: {msgViewport})`, 0, 0, cursorAfterMove }
+	end
+
+	local ok, msg, state = tryMode(mouseAbsCoordMode)
+	if ok then
+		return { true, msg, state.dx, state.dy, state.cursor }
+	end
+	local otherMode = if mouseAbsCoordMode == "screen" then "viewport" else "screen"
+	local okOther, msgOther, otherState = tryMode(otherMode)
+	if okOther then
+		mouseAbsCoordMode = otherMode
+		return { true, msgOther, otherState.dx, otherState.dy, otherState.cursor }
+	end
+	return { false, `abs move failed ({msg}; {msgOther})`, 0, 0, cursorAfterMove }
+end
+local applyClickNudge = function()
+	local didNudgeOut, nudgeOutError = pcall(function()
+		return mousemoverel(1, 1)
+	end)
+	if not didNudgeOut then
+		return { false, `mousemoverel nudge-out failed ({nudgeOutError})` }
+	end
+	local didNudgeBack, nudgeBackError = pcall(function()
+		return mousemoverel(-1, -1)
+	end)
+	if not didNudgeBack then
+		return { false, `mousemoverel nudge-back failed ({nudgeBackError})` }
+	end
+	return { true, "nudge ok" }
+end
+local clickSourceContext = function(context, resolvedPoint, pointMessage)
+	local target, targetSource = resolveMoveTargetFromCalculatedPoint(resolvedPoint)
+	if not target then
+		return { false, `{context.phase} {context.coordinate} failed ({targetSource})`, nil }
+	end
+	local _binding = moveAbsoluteToTarget(target)
+	local didMove = _binding[1]
+	local moveMessage = _binding[2]
+	if not didMove then
+		return { false, `{context.phase} {context.coordinate} failed ({moveMessage})`, nil }
+	end
+	task.wait(0.1)
+	mouse1click()
+	local clickedPoint = getCurrentCursorPosition()
+	return { true, `{context.button} clicked {context.phase} {context.coordinate} @ screen({clickedPoint.X},{clickedPoint.Y}) world({math.round(resolvedPoint.world.X * 100) / 100},{math.round(resolvedPoint.world.Y * 100) / 100},{math.round(resolvedPoint.world.Z * 100) / 100}) ({pointMessage}; target={target.screenX},{target.screenY} via {targetSource}; {moveMessage})`, clickedPoint }
+end
+-- Destination click uses the same absolute move logic as source, but performs a tiny
+-- relative nudge to help the game register the second click. To ensure the nudge does
+-- not shift the final click coordinate, we re-apply mousemoveabs back to the target
+-- before mouse1click().
+local clickDestinationContext = function(context, resolvedPoint, pointMessage)
+	local target, targetSource = resolveMoveTargetFromCalculatedPoint(resolvedPoint)
+	if not target then
+		return { false, `{context.phase} {context.coordinate} failed ({targetSource})`, nil }
+	end
+	local _binding = moveAbsoluteToTarget(target)
+	local didMove = _binding[1]
+	local moveMessage = _binding[2]
+	if not didMove then
+		return { false, `{context.phase} {context.coordinate} failed ({moveMessage})`, nil }
+	end
+	task.wait(0.1)
+	local _binding_1 = applyClickNudge()
+	local didNudge = _binding_1[1]
+	local nudgeMessage = _binding_1[2]
+	if not didNudge then
+		return { false, `{context.phase} {context.coordinate} failed ({nudgeMessage})`, nil }
+	end
+	-- Re-center to the exact same target after the nudge so it cannot interfere.
+	local _binding_2 = moveAbsoluteToTarget(target)
+	local didMove2 = _binding_2[1]
+	local moveMessage2 = _binding_2[2]
+	if not didMove2 then
+		return { false, `{context.phase} {context.coordinate} failed ({moveMessage2})`, nil }
+	end
+	task.wait()
+	mouse1click()
+	local clickedPoint = getCurrentCursorPosition()
+	return { true, `{context.button} clicked {context.phase} {context.coordinate} @ screen({clickedPoint.X},{clickedPoint.Y}) world({math.round(resolvedPoint.world.X * 100) / 100},{math.round(resolvedPoint.world.Y * 100) / 100},{math.round(resolvedPoint.world.Z * 100) / 100}) ({pointMessage}; target={target.screenX},{target.screenY} via {targetSource}; {moveMessage}; {nudgeMessage}; {moveMessage2})`, clickedPoint }
+end
+local executeRemoteEvent = function(move, board)
+	local movePieceEvent = getMovePieceEvent()
+	if not movePieceEvent then
+		return { false, "MovePiece remote not found" }
+	end
+	local matchId = updateMatchIdFromBoard(board)
+	if matchId == nil then
+		return { false, "invalid match id" }
+	end
+	local fromX, fromY, toX, toY = getPosFromResult(move)
+	local fromPosition = { fromX, fromY }
+	local toPosition = { toX, toY }
+	local pieceData = board:getPieceDataAt(fromX, fromY)
+	local pieceName = getPieceName(pieceData)
+	local isPawn = pieceName == "Pawn"
+	if isPawn then
+		toPosition.doubleStep = resolveDoubleStep(pieceData)
+		if fromX == toX then
+			toPosition.moveOnly = true
+		end
+	end
+	local fired, errorMessage = pcall(function()
+		return movePieceEvent:FireServer(matchId, fromPosition, toPosition, {})
+	end)
+	if not fired then
+		return { false, `failed to fire MovePiece ({errorMessage})` }
+	end
+	return { true, `remote sent: id={matchId}, move={move}` }
+end
+local executeMouseApi = function(move, _board, targets)
+	if not ensure_executor_functions_access(mousemoverel, mousemoveabs, mouse1click) then
+		return { false, "mouse API is not supported by current executor" }
+	end
+	local fromX, fromY, toX, toY = getPosFromResult(move)
+	local _binding = buildClickContext(fromX, fromY, toX, toY, targets)
+	local clickContext = _binding[1]
+	local contextMessage = _binding[2]
+	if not clickContext then
+		return { false, contextMessage }
+	end
+	local _binding_1 = resolveTopVisibleScreenPoint(clickContext.source)
+	local sourcePoint = _binding_1[1]
+	local sourcePointMessage = _binding_1[2]
+	if not sourcePoint then
+		return { false, `{clickContext.source.phase} {clickContext.source.coordinate} failed ({sourcePointMessage})` }
+	end
+	local _binding_2 = resolveTopVisibleScreenPoint(clickContext.destination)
+	local destinationPoint = _binding_2[1]
+	local destinationPointMessage = _binding_2[2]
+	if not destinationPoint then
+		return { false, `{clickContext.destination.phase} {clickContext.destination.coordinate} failed ({destinationPointMessage})` }
+	end
+	-- Always materialize both debug points first, so the two calculated targets are visible.
+	createDebugPointMarker(sourcePoint.world, "source")
+	createDebugPointMarker(destinationPoint.world, "destination")
+	local _binding_3 = clickSourceContext(clickContext.source, sourcePoint, sourcePointMessage)
+	local didClickFrom = _binding_3[1]
+	local fromClickMessage = _binding_3[2]
+	if not didClickFrom then
+		return { false, fromClickMessage }
+	end
+	-- Ensure the game has time to register selection before the destination click.
+	task.wait(math.max(mouseStepDelaySeconds, 0.1))
+	local _binding_4 = clickDestinationContext(clickContext.destination, destinationPoint, destinationPointMessage)
+	local didClickTo = _binding_4[1]
+	local toClickMessage = _binding_4[2]
+	if not didClickTo then
+		return { false, toClickMessage }
+	end
+	return { true, `mouse move sent: {move} ({fromClickMessage}; {toClickMessage})` }
+end
+local api = {
+	startMatchIdListener = function()
+		if hasStartedListener then
+			return { true, "start game listener already active" }
+		end
+		local connections = getConnectionsFolder()
+		if not connections then
+			return { false, "Connections folder not found" }
+		end
+		local startGame = connections:FindFirstChild("StartGame")
+		if not startGame or not startGame:IsA("RemoteEvent") then
+			return { false, "StartGame remote not found" }
+		end
+		startGame.OnClientEvent:Connect(function(payload)
+			if type(payload) ~= "table" then
+				return nil
+			end
+			local id = parseNumber(payload.id)
+			if id ~= nil then
+				lastMatchId = id
+			end
+		end)
+		hasStartedListener = true
+		return { true, "start game listener connected" }
+	end,
+	getCurrentMatchId = function(board)
+		return updateMatchIdFromBoard(board)
+	end,
+	supportsMouseApi = function()
+		return ensure_executor_functions_access(mousemoverel, mousemoveabs, mouse1click)
+	end,
+	setMouseStepDelaySeconds = function(seconds)
+		if type(seconds) ~= "number" then
+			return nil
+		end
+		mouseStepDelaySeconds = math.clamp(seconds, 0, 5)
+	end,
+	setMouseClickDelaySeconds = function(seconds)
+		if type(seconds) ~= "number" then
+			return nil
+		end
+		mouseClickDelaySeconds = math.clamp(seconds, 0, 5)
+	end,
+	execute = function(move, board, method, targets)
+		if method == "Mouse API" then
+			return executeMouseApi(move, board, targets)
+		end
+		return executeRemoteEvent(move, board)
+	end,
+}
+return api
+
+end)() end,
+    [19] = function()local wax,script,require=ImportGlobals(19)local ImportGlobals return (function(...)local Promise = require(script.Parent.Promise)
+
+local RunService = game:GetService("RunService")
+
+local OUTPUT_PREFIX = "roblox-ts: "
+local NODE_MODULES = "node_modules"
+local DEFAULT_SCOPE = "@rbxts"
+
+local TS = {}
+
+TS.Promise = Promise
+
+local function isPlugin(context)
+	return RunService:IsStudio() and context:FindFirstAncestorWhichIsA("Plugin") ~= nil
+end
+
+function TS.getModule(context, scope, moduleName)
+	-- legacy call signature
+	if moduleName == nil then
+		moduleName = scope
+		scope = DEFAULT_SCOPE
+	end
+
+	-- ensure modules have fully replicated
+	if RunService:IsRunning() and RunService:IsClient() and not isPlugin(context) and not game:IsLoaded() then
+		game.Loaded:Wait()
+	end
+
+	local object = context
+	repeat
+		local nodeModulesFolder = object:FindFirstChild(NODE_MODULES)
+		if nodeModulesFolder then
+			local scopeFolder = nodeModulesFolder:FindFirstChild(scope)
+			if scopeFolder then
+				local module = scopeFolder:FindFirstChild(moduleName)
+				if module then
+					return module
+				end
+			end
+		end
+		object = object.Parent
+	until object == nil
+
+	error(OUTPUT_PREFIX .. "Could not find module: " .. moduleName, 2)
+end
+
+-- This is a hash which TS.import uses as a kind of linked-list-like history of [Script who Loaded] -> Library
+local currentlyLoading = {}
+local registeredLibraries = {}
+
+function TS.import(context, module, ...)
+	for i = 1, select("#", ...) do
+		module = module:WaitForChild((select(i, ...)))
+	end
+
+	if module.ClassName ~= "ModuleScript" then
+		error(OUTPUT_PREFIX .. "Failed to import! Expected ModuleScript, got " .. module.ClassName, 2)
+	end
+
+	currentlyLoading[context] = module
+
+	-- Check to see if a case like this occurs:
+	-- module -> Module1 -> Module2 -> module
+
+	-- WHERE currentlyLoading[module] is Module1
+	-- and currentlyLoading[Module1] is Module2
+	-- and currentlyLoading[Module2] is module
+
+	local currentModule = module
+	local depth = 0
+
+	while currentModule do
+		depth = depth + 1
+		currentModule = currentlyLoading[currentModule]
+
+		if currentModule == module then
+			local str = currentModule.Name -- Get the string traceback
+
+			for _ = 1, depth do
+				currentModule = currentlyLoading[currentModule]
+				str = str .. "  ⇒ " .. currentModule.Name
+			end
+
+			error(OUTPUT_PREFIX .. "Failed to import! Detected a circular dependency chain: " .. str, 2)
+		end
+	end
+
+	if not registeredLibraries[module] then
+		if _G[module] then
+			error(
+				OUTPUT_PREFIX
+				.. "Invalid module access! Do you have multiple TS runtimes trying to import this? "
+				.. module:GetFullName(),
+				2
+			)
+		end
+
+		_G[module] = TS
+		registeredLibraries[module] = true -- register as already loaded for subsequent calls
+	end
+
+	local data = require(module)
+
+	if currentlyLoading[context] == module then -- Thread-safe cleanup!
+		currentlyLoading[context] = nil
+	end
+
+	return data
+end
+
+function TS.instanceof(obj, class)
+	-- custom Class.instanceof() check
+	if type(class) == "table" and type(class.instanceof) == "function" then
+		return class.instanceof(obj)
+	end
+
+	-- metatable check
+	if type(obj) == "table" then
+		obj = getmetatable(obj)
+		while obj ~= nil do
+			if obj == class then
+				return true
+			end
+			local mt = getmetatable(obj)
+			if mt then
+				obj = mt.__index
+			else
+				obj = nil
+			end
+		end
+	end
+
+	return false
+end
+
+function TS.async(callback)
+	return function(...)
+		local n = select("#", ...)
+		local args = { ... }
+		return Promise.new(function(resolve, reject)
+			coroutine.wrap(function()
+				local ok, result = pcall(callback, unpack(args, 1, n))
+				if ok then
+					resolve(result)
+				else
+					reject(result)
+				end
+			end)()
+		end)
+	end
+end
+
+function TS.await(promise)
+	if not Promise.is(promise) then
+		return promise
+	end
+
+	local status, value = promise:awaitStatus()
+	if status == Promise.Status.Resolved then
+		return value
+	elseif status == Promise.Status.Rejected then
+		error(value, 2)
+	else
+		error("The awaited Promise was cancelled", 2)
+	end
+end
+
+local SIGN = 2 ^ 31
+local COMPLEMENT = 2 ^ 32
+local function bit_sign(num)
+	-- Restores the sign after an unsigned conversion according to 2s complement.
+	if bit32.btest(num, SIGN) then
+		return num - COMPLEMENT
+	else
+		return num
+	end
+end
+
+function TS.bit_lrsh(a, b)
+	return bit_sign(bit32.arshift(a, b))
+end
+
+TS.TRY_RETURN = 1
+TS.TRY_BREAK = 2
+TS.TRY_CONTINUE = 3
+
+function TS.try(try, catch, finally)
+	-- execute try
+	local trySuccess, exitTypeOrTryError, returns = pcall(try)
+	local exitType, tryError
+	if trySuccess then
+		exitType = exitTypeOrTryError
+	else
+		tryError = exitTypeOrTryError
+	end
+
+	local catchSuccess = true
+	local catchError
+
+	-- if try block failed, and catch block exists, execute catch
+	if not trySuccess and catch then
+		local newExitTypeOrCatchError, newReturns
+		catchSuccess, newExitTypeOrCatchError, newReturns = pcall(catch, tryError)
+		local newExitType
+		if catchSuccess then
+			newExitType = newExitTypeOrCatchError
+		else
+			catchError = newExitTypeOrCatchError
+		end
+
+		if newExitType then
+			exitType, returns = newExitType, newReturns
+		end
+	end
+
+	-- execute finally
+	if finally then
+		local newExitType, newReturns = finally()
+		if newExitType then
+			exitType, returns = newExitType, newReturns
+		end
+	end
+
+	-- if exit type is a control flow, do not rethrow errors
+	if exitType ~= TS.TRY_RETURN and exitType ~= TS.TRY_BREAK and exitType ~= TS.TRY_CONTINUE then
+		-- if catch block threw an error, rethrow it
+		if not catchSuccess then
+			error(catchError, 2)
+		end
+
+		-- if try block threw an error and there was no catch block, rethrow it
+		if not trySuccess and not catch then
+			error(tryError, 2)
+		end
+	end
+
+	return exitType, returns
+end
+
+function TS.generator(callback)
+	local co = coroutine.create(callback)
+	return {
+		next = function(...)
+			if coroutine.status(co) == "dead" then
+				return { done = true }
+			else
+				local success, value = coroutine.resume(co, ...)
+				if success == false then
+					error(value, 2)
+				end
+				return {
+					value = value,
+					done = coroutine.status(co) == "dead",
+				}
+			end
+		end,
+	}
+end
+
+return TS
 
 end)() end,
     [18] = function()local wax,script,require=ImportGlobals(18)local ImportGlobals return (function(...)--[[
@@ -7200,1335 +8719,13 @@ end
 return Promise
 
 end)() end,
-    [13] = function()local wax,script,require=ImportGlobals(13)local ImportGlobals return (function(...)-- Compiled with roblox-ts v3.0.0
-local TS = require(script.Parent.Parent.include.RuntimeLib)
-local _services = TS.import(script, script.Parent.Parent, "include", "node_modules", "@rbxts", "services")
-local HttpService = _services.HttpService
-local Workspace = _services.Workspace
-local HttpGet = TS.import(script, script.Parent, "HttpGet")
-local Board = TS.import(script, script.Parent, "LuaFuncs", "board")
-local getPosFromResult = TS.import(script, script.Parent, "getPosFromResult")
-local getStableFen = function(board, attempts, waitSeconds)
-	if attempts == nil then
-		attempts = 40
-	end
-	if waitSeconds == nil then
-		waitSeconds = 0.05
-	end
-	do
-		local attempt = 0
-		local _shouldIncrement = false
-		while true do
-			if _shouldIncrement then
-				attempt += 1
-			else
-				_shouldIncrement = true
-			end
-			if not (attempt < attempts) then
-				break
-			end
-			local fen = board:board2fen()
-			local _condition = fen
-			if _condition ~= "" and _condition then
-				_condition = fen ~= "8/8/8/8/8/8/8/8 w" and fen ~= "8/8/8/8/8/8/8/8 b"
-			end
-			if _condition ~= "" and _condition then
-				return fen
-			end
-			task.wait(waitSeconds)
-		end
-	end
-	return nil
-end
---[[
-	*
-	 * Does a ton of checks and gets the best move
-	 
-]]
-return function(board, depth, maxThinkTime, disregardThinkTime, options)
-	if not board:isPlayerTurn() then
-		return { false, "not your turn" }
-	end
-	if board:willCauseDesync() then
-		-- Keep compatibility with previous behavior: this check is advisory only.
-		warn("board sync check reported a potential desync risk")
-	end
-	local fen = getStableFen(board)
-	if not (fen ~= "" and fen) then
-		return { false, "board not ready (fen unavailable)" }
-	end
-	local _result = options
-	if _result ~= nil then
-		_result = _result.endpoint
-	end
-	local _condition = _result
-	if _condition == nil then
-		_condition = "http://127.0.0.1:3000"
-	end
-	local endpoint = _condition
-	local _exp = `{endpoint}/api/solve?fen={HttpService:UrlEncode(fen)}&depth={depth}&max_think_time={maxThinkTime}&disregard_think_time={disregardThinkTime}`
-	local _object = {}
-	local _left = "retries"
-	local _result_1 = options
-	if _result_1 ~= nil then
-		_result_1 = _result_1.retries
-	end
-	local _condition_1 = _result_1
-	if _condition_1 == nil then
-		_condition_1 = 1
-	end
-	_object[_left] = _condition_1
-	local requestSucceeded, response = HttpGet(_exp, _object)
-	if not requestSucceeded then
-		return { false, `no response from server ({response})` }
-	end
-	local decodeSucceeded, decodedOrError = pcall(function()
-		return HttpService:JSONDecode(response)
-	end)
-	if not decodeSucceeded then
-		return { false, `invalid server response ({decodedOrError})` }
-	end
-	local data = decodedOrError
-	local successValue = data.success
-	local resultValue = data.result
-	if type(successValue) ~= "boolean" or type(resultValue) ~= "string" then
-		return { false, "invalid server payload" }
-	end
-	local success = successValue
-	local move = resultValue
-	if #move == 0 then
-		return { false, "invalid server payload" }
-	end
-	if not success then
-		return { false, move }
-	end
-	if not { string.match(move, "^[a-h][1-8][a-h][1-8]$") } then
-		return { false, `invalid move format ({move})` }
-	end
-	local x1, y1, x2, y2 = getPosFromResult(move)
-	local pieceToMove = Board.getPiece(tostring(tostring(x1) .. "," .. tostring(y1)))
-	if not pieceToMove then
-		return { false, "no piece to move" }
-	end
-	local _placeToMove = Workspace:FindFirstChild("Board")
-	if _placeToMove ~= nil then
-		_placeToMove = _placeToMove:FindFirstChild(tostring(tostring(x2) .. "," .. tostring(y2)))
-	end
-	local placeToMove = _placeToMove
-	if not placeToMove then
-		return { false, "no place to move to" }
-	end
-	return { true, move, pieceToMove, placeToMove }
-end
-
-end)() end,
-    [15] = function()local wax,script,require=ImportGlobals(15)local ImportGlobals return (function(...)-- Compiled with roblox-ts v3.0.0
-return function(result)
-	if #result ~= 4 then
-		error(`invalid stockfish move length: {result}`)
-	end
-	local fileToX = function(file)
-		local bytes = { string.byte(file) }
-		local byteValue = bytes[1]
-		if byteValue < 97 or byteValue > 104 then
-			error(`invalid file value in stockfish move: {result}`)
-		end
-		return 9 - (byteValue - 96)
-	end
-	local rankToY = function(rank)
-		local parsedRank = tonumber(rank)
-		if parsedRank == nil or parsedRank < 1 or parsedRank > 8 then
-			error(`invalid rank value in stockfish move: {result}`)
-		end
-		return parsedRank
-	end
-	local x1 = fileToX(string.sub(result, 1, 1))
-	local y1 = rankToY(string.sub(result, 2, 2))
-	local x2 = fileToX(string.sub(result, 3, 3))
-	local y2 = rankToY(string.sub(result, 4, 4))
-	return x1, y1, x2, y2
-end
-
-end)() end,
-    [8] = function()local wax,script,require=ImportGlobals(8)local ImportGlobals return (function(...)-- Compiled with roblox-ts v3.0.0
-local TS = require(script.Parent.Parent.include.RuntimeLib)
-local Workspace = TS.import(script, script.Parent.Parent, "include", "node_modules", "@rbxts", "services").Workspace
-local CoreGui = TS.import(script, script.Parent, "CoreGui")
-local Highlighter
-do
-	Highlighter = setmetatable({}, {
-		__tostring = function()
-			return "Highlighter"
-		end,
-	})
-	Highlighter.__index = Highlighter
-	function Highlighter.new(...)
-		local self = setmetatable({}, Highlighter)
-		return self:constructor(...) or self
-	end
-	function Highlighter:constructor(target, options)
-		local highlighterStorage = Highlighter:getStorage()
-		local _exp = highlighterStorage:GetChildren()
-		-- ▼ ReadonlyArray.forEach ▼
-		local _callback = function(child)
-			if child:IsA("Highlight") and child.Adornee == target then
-				warn("trying to highlight already highlighted object")
-				return nil
-			end
-		end
-		for _k, _v in _exp do
-			_callback(_v, _k - 1, _exp)
-		end
-		-- ▲ ReadonlyArray.forEach ▲
-		-- confusing asl but we gotta work with it
-		local _highlight = Instance.new("Highlight")
-		local _result = options
-		if _result ~= nil then
-			_result = _result.Name
-		end
-		local _condition = _result
-		if _condition == nil then
-			_condition = "Highlight"
-		end
-		_highlight.Name = _condition
-		local _result_1 = options
-		if _result_1 ~= nil then
-			_result_1 = _result_1.FillColor
-		end
-		local _condition_1 = _result_1
-		if _condition_1 == nil then
-			_condition_1 = Color3.fromRGB(59, 235, 223)
-		end
-		_highlight.FillColor = _condition_1
-		local _result_2 = options
-		if _result_2 ~= nil then
-			_result_2 = _result_2.DepthMode
-		end
-		local _condition_2 = _result_2
-		if _condition_2 == nil then
-			_condition_2 = Enum.HighlightDepthMode.AlwaysOnTop
-		end
-		_highlight.DepthMode = _condition_2
-		local _result_3 = options
-		if _result_3 ~= nil then
-			_result_3 = _result_3.FillTransparency
-		end
-		local _condition_3 = _result_3
-		if _condition_3 == nil then
-			_condition_3 = 0.5
-		end
-		_highlight.FillTransparency = _condition_3
-		local _result_4 = options
-		if _result_4 ~= nil then
-			_result_4 = _result_4.OutlineColor
-		end
-		local _condition_4 = _result_4
-		if _condition_4 == nil then
-			_condition_4 = Color3.fromRGB(255, 255, 255)
-		end
-		_highlight.OutlineColor = _condition_4
-		local _result_5 = options
-		if _result_5 ~= nil then
-			_result_5 = _result_5.OutlineTransparency
-		end
-		local _condition_5 = _result_5
-		if _condition_5 == nil then
-			_condition_5 = 0
-		end
-		_highlight.OutlineTransparency = _condition_5
-		local _result_6 = options
-		if _result_6 ~= nil then
-			_result_6 = _result_6.Parent
-		end
-		local _condition_6 = _result_6
-		if _condition_6 == nil then
-			_condition_6 = highlighterStorage
-		end
-		_highlight.Parent = _condition_6
-		_highlight.Adornee = target
-		self.highlight = _highlight
-	end
-	function Highlighter:getStorage()
-		local storage = CoreGui:FindFirstChild("HighlightStorage")
-		if not storage or not storage:IsA("Folder") then
-			local _result = storage
-			if _result ~= nil then
-				_result:Destroy()
-			end
-			local folder = Instance.new("Folder")
-			folder.Name = "HighlightStorage"
-			folder.Parent = CoreGui
-			storage = folder
-		end
-		return storage
-	end
-	function Highlighter:destroy()
-		self.highlight:Destroy()
-	end
-	function Highlighter:destory()
-		self:destroy()
-	end
-	function Highlighter:destroyAll()
-		local storage = CoreGui:FindFirstChild("HighlightStorage")
-		local _result = storage
-		if _result ~= nil then
-			_result = _result:IsA("Folder")
-		end
-		if _result then
-			local _exp = storage:GetChildren()
-			-- ▼ ReadonlyArray.forEach ▼
-			local _callback = function(child)
-				return child:Destroy()
-			end
-			for _k, _v in _exp do
-				_callback(_v, _k - 1, _exp)
-			end
-			-- ▲ ReadonlyArray.forEach ▲
-		end
-		-- Cleanup legacy highlights previously created outside HighlightStorage.
-		local _result_1 = Workspace:FindFirstChild("Board")
-		if _result_1 ~= nil then
-			local _exp = _result_1:GetDescendants()
-			-- ▼ ReadonlyArray.forEach ▼
-			local _callback = function(descendant)
-				if descendant:IsA("Highlight") then
-					descendant:Destroy()
-				end
-			end
-			for _k, _v in _exp do
-				_callback(_v, _k - 1, _exp)
-			end
-			-- ▲ ReadonlyArray.forEach ▲
-		end
-		local _result_2 = Workspace:FindFirstChild("Pieces")
-		if _result_2 ~= nil then
-			local _exp = _result_2:GetDescendants()
-			-- ▼ ReadonlyArray.forEach ▼
-			local _callback = function(descendant)
-				if descendant:IsA("Highlight") then
-					descendant:Destroy()
-				end
-			end
-			for _k, _v in _exp do
-				_callback(_v, _k - 1, _exp)
-			end
-			-- ▲ ReadonlyArray.forEach ▲
-		end
-	end
-end
-return {
-	Highlighter = Highlighter,
-}
-
-end)() end,
-    [19] = function()local wax,script,require=ImportGlobals(19)local ImportGlobals return (function(...)local Promise = require(script.Parent.Promise)
-
-local RunService = game:GetService("RunService")
-
-local OUTPUT_PREFIX = "roblox-ts: "
-local NODE_MODULES = "node_modules"
-local DEFAULT_SCOPE = "@rbxts"
-
-local TS = {}
-
-TS.Promise = Promise
-
-local function isPlugin(context)
-	return RunService:IsStudio() and context:FindFirstAncestorWhichIsA("Plugin") ~= nil
-end
-
-function TS.getModule(context, scope, moduleName)
-	-- legacy call signature
-	if moduleName == nil then
-		moduleName = scope
-		scope = DEFAULT_SCOPE
-	end
-
-	-- ensure modules have fully replicated
-	if RunService:IsRunning() and RunService:IsClient() and not isPlugin(context) and not game:IsLoaded() then
-		game.Loaded:Wait()
-	end
-
-	local object = context
-	repeat
-		local nodeModulesFolder = object:FindFirstChild(NODE_MODULES)
-		if nodeModulesFolder then
-			local scopeFolder = nodeModulesFolder:FindFirstChild(scope)
-			if scopeFolder then
-				local module = scopeFolder:FindFirstChild(moduleName)
-				if module then
-					return module
-				end
-			end
-		end
-		object = object.Parent
-	until object == nil
-
-	error(OUTPUT_PREFIX .. "Could not find module: " .. moduleName, 2)
-end
-
--- This is a hash which TS.import uses as a kind of linked-list-like history of [Script who Loaded] -> Library
-local currentlyLoading = {}
-local registeredLibraries = {}
-
-function TS.import(context, module, ...)
-	for i = 1, select("#", ...) do
-		module = module:WaitForChild((select(i, ...)))
-	end
-
-	if module.ClassName ~= "ModuleScript" then
-		error(OUTPUT_PREFIX .. "Failed to import! Expected ModuleScript, got " .. module.ClassName, 2)
-	end
-
-	currentlyLoading[context] = module
-
-	-- Check to see if a case like this occurs:
-	-- module -> Module1 -> Module2 -> module
-
-	-- WHERE currentlyLoading[module] is Module1
-	-- and currentlyLoading[Module1] is Module2
-	-- and currentlyLoading[Module2] is module
-
-	local currentModule = module
-	local depth = 0
-
-	while currentModule do
-		depth = depth + 1
-		currentModule = currentlyLoading[currentModule]
-
-		if currentModule == module then
-			local str = currentModule.Name -- Get the string traceback
-
-			for _ = 1, depth do
-				currentModule = currentlyLoading[currentModule]
-				str = str .. "  ⇒ " .. currentModule.Name
-			end
-
-			error(OUTPUT_PREFIX .. "Failed to import! Detected a circular dependency chain: " .. str, 2)
-		end
-	end
-
-	if not registeredLibraries[module] then
-		if _G[module] then
-			error(
-				OUTPUT_PREFIX
-				.. "Invalid module access! Do you have multiple TS runtimes trying to import this? "
-				.. module:GetFullName(),
-				2
-			)
-		end
-
-		_G[module] = TS
-		registeredLibraries[module] = true -- register as already loaded for subsequent calls
-	end
-
-	local data = require(module)
-
-	if currentlyLoading[context] == module then -- Thread-safe cleanup!
-		currentlyLoading[context] = nil
-	end
-
-	return data
-end
-
-function TS.instanceof(obj, class)
-	-- custom Class.instanceof() check
-	if type(class) == "table" and type(class.instanceof) == "function" then
-		return class.instanceof(obj)
-	end
-
-	-- metatable check
-	if type(obj) == "table" then
-		obj = getmetatable(obj)
-		while obj ~= nil do
-			if obj == class then
-				return true
-			end
-			local mt = getmetatable(obj)
-			if mt then
-				obj = mt.__index
-			else
-				obj = nil
-			end
-		end
-	end
-
-	return false
-end
-
-function TS.async(callback)
-	return function(...)
-		local n = select("#", ...)
-		local args = { ... }
-		return Promise.new(function(resolve, reject)
-			coroutine.wrap(function()
-				local ok, result = pcall(callback, unpack(args, 1, n))
-				if ok then
-					resolve(result)
-				else
-					reject(result)
-				end
-			end)()
-		end)
-	end
-end
-
-function TS.await(promise)
-	if not Promise.is(promise) then
-		return promise
-	end
-
-	local status, value = promise:awaitStatus()
-	if status == Promise.Status.Resolved then
-		return value
-	elseif status == Promise.Status.Rejected then
-		error(value, 2)
-	else
-		error("The awaited Promise was cancelled", 2)
-	end
-end
-
-local SIGN = 2 ^ 31
-local COMPLEMENT = 2 ^ 32
-local function bit_sign(num)
-	-- Restores the sign after an unsigned conversion according to 2s complement.
-	if bit32.btest(num, SIGN) then
-		return num - COMPLEMENT
-	else
-		return num
-	end
-end
-
-function TS.bit_lrsh(a, b)
-	return bit_sign(bit32.arshift(a, b))
-end
-
-TS.TRY_RETURN = 1
-TS.TRY_BREAK = 2
-TS.TRY_CONTINUE = 3
-
-function TS.try(try, catch, finally)
-	-- execute try
-	local trySuccess, exitTypeOrTryError, returns = pcall(try)
-	local exitType, tryError
-	if trySuccess then
-		exitType = exitTypeOrTryError
-	else
-		tryError = exitTypeOrTryError
-	end
-
-	local catchSuccess = true
-	local catchError
-
-	-- if try block failed, and catch block exists, execute catch
-	if not trySuccess and catch then
-		local newExitTypeOrCatchError, newReturns
-		catchSuccess, newExitTypeOrCatchError, newReturns = pcall(catch, tryError)
-		local newExitType
-		if catchSuccess then
-			newExitType = newExitTypeOrCatchError
-		else
-			catchError = newExitTypeOrCatchError
-		end
-
-		if newExitType then
-			exitType, returns = newExitType, newReturns
-		end
-	end
-
-	-- execute finally
-	if finally then
-		local newExitType, newReturns = finally()
-		if newExitType then
-			exitType, returns = newExitType, newReturns
-		end
-	end
-
-	-- if exit type is a control flow, do not rethrow errors
-	if exitType ~= TS.TRY_RETURN and exitType ~= TS.TRY_BREAK and exitType ~= TS.TRY_CONTINUE then
-		-- if catch block threw an error, rethrow it
-		if not catchSuccess then
-			error(catchError, 2)
-		end
-
-		-- if try block threw an error and there was no catch block, rethrow it
-		if not trySuccess and not catch then
-			error(tryError, 2)
-		end
-	end
-
-	return exitType, returns
-end
-
-function TS.generator(callback)
-	local co = coroutine.create(callback)
-	return {
-		next = function(...)
-			if coroutine.status(co) == "dead" then
-				return { done = true }
-			else
-				local success, value = coroutine.resume(co, ...)
-				if success == false then
-					error(value, 2)
-				end
-				return {
-					value = value,
-					done = coroutine.status(co) == "dead",
-				}
-			end
-		end,
-	}
-end
-
-return TS
-
-end)() end,
-    [14] = function()local wax,script,require=ImportGlobals(14)local ImportGlobals return (function(...)-- Compiled with roblox-ts v3.0.0
-local function findOrCreateInstance(parent, child, instance)
-	if parent:FindFirstChild(child) then
-		return parent
-	end
-	local new_instance = Instance.new(instance)
-	new_instance.Name = child
-	new_instance.Parent = parent
-	return new_instance
-end
-return findOrCreateInstance
-
-end)() end,
-    [16] = function()local wax,script,require=ImportGlobals(16)local ImportGlobals return (function(...)-- Compiled with roblox-ts v3.0.0
-local TS = require(script.Parent.Parent.include.RuntimeLib)
-local _services = TS.import(script, script.Parent.Parent, "include", "node_modules", "@rbxts", "services")
-local Players = _services.Players
-local ReplicatedStorage = _services.ReplicatedStorage
-local UserInputService = _services.UserInputService
-local Workspace = _services.Workspace
-local _Unc = TS.import(script, script.Parent.Parent, "libs", "Unc")
-local ensure_executor_functions_access = _Unc.ensure_executor_functions_access
-local mouse1click = _Unc.mouse1click
-local mousemoveabs = _Unc.mousemoveabs
-local mousemoverel = _Unc.mousemoverel
-local Board = TS.import(script, script.Parent, "LuaFuncs", "board")
-local getPosFromResult = TS.import(script, script.Parent, "getPosFromResult")
-local lastMatchId
-local hasStartedListener = false
-local lastInjectedMousePosition
-local mouseStepDelaySeconds = 0.2
-local mouseClickDelaySeconds = 0.05
-local getConnectionsFolder = function()
-	local connections = ReplicatedStorage:FindFirstChild("Connections")
-	if not connections or not connections:IsA("Folder") then
-		return nil
-	end
-	return connections
-end
-local parseNumber = function(value)
-	if type(value) ~= "number" then
-		return nil
-	end
-	return value
-end
-local updateMatchIdFromBoard = function(board)
-	if not board then
-		return lastMatchId
-	end
-	local rawMatch = board:getRawMatch()
-	if not rawMatch then
-		return lastMatchId
-	end
-	local boardMatchId = parseNumber(rawMatch.id)
-	if boardMatchId ~= nil then
-		lastMatchId = boardMatchId
-	end
-	return lastMatchId
-end
-local resolveDoubleStep = function(pieceData)
-	if type(pieceData) ~= "table" then
-		return 0
-	end
-	local piece = pieceData
-	local _condition = parseNumber(piece.doubleStep)
-	if _condition == nil then
-		_condition = parseNumber(piece.doublestep)
-	end
-	local directDoubleStep = _condition
-	if directDoubleStep ~= nil then
-		return directDoubleStep
-	end
-	local position = piece.position
-	if position and type(position) == "table" then
-		local _condition_1 = parseNumber(position.doubleStep)
-		if _condition_1 == nil then
-			_condition_1 = parseNumber(position.doublestep)
-			if _condition_1 == nil then
-				_condition_1 = parseNumber(position[3])
-			end
-		end
-		local positionDoubleStep = _condition_1
-		if positionDoubleStep ~= nil then
-			return positionDoubleStep
-		end
-	end
-	return 0
-end
-local getPieceName = function(pieceData)
-	if type(pieceData) ~= "table" then
-		return nil
-	end
-	local piece = pieceData
-	local pieceObject = piece.object
-	if not pieceObject then
-		return nil
-	end
-	return pieceObject.Name
-end
-local getMovePieceEvent = function()
-	local connections = getConnectionsFolder()
-	if not connections then
-		return nil
-	end
-	local movePiece = connections:FindFirstChild("MovePiece")
-	if not movePiece or not movePiece:IsA("RemoteEvent") then
-		return nil
-	end
-	return movePiece
-end
-local getTileInstance = function(x, y)
-	local boardRoot = Workspace:FindFirstChild("Board")
-	if not boardRoot then
-		return nil
-	end
-	return boardRoot:FindFirstChild(`{x},{y}`)
-end
-local findFirstBasePart = function(target)
-	if target:IsA("BasePart") then
-		return target
-	end
-	local descendants = target:GetDescendants()
-	for _, descendant in descendants do
-		if descendant:IsA("BasePart") then
-			return descendant
-		end
-	end
-	return nil
-end
-local getInstanceWorldPosition = function(target)
-	if target:IsA("Attachment") then
-		return target.WorldPosition
-	end
-	if target:IsA("BasePart") then
-		return target.Position
-	end
-	if target:IsA("Model") then
-		local primaryPart = target.PrimaryPart
-		if primaryPart then
-			return primaryPart.Position
-		end
-		local meshesFolder = target:FindFirstChild("Meshes")
-		local _meshTile = meshesFolder
-		if _meshTile ~= nil then
-			_meshTile = _meshTile:FindFirstChild("tile_a")
-		end
-		local meshTile = _meshTile
-		if meshTile and meshTile:IsA("BasePart") then
-			return meshTile.Position
-		end
-		local tilePart = target:FindFirstChild("Tile")
-		if tilePart and tilePart:IsA("BasePart") then
-			return tilePart.Position
-		end
-		local firstPart = findFirstBasePart(target)
-		if firstPart then
-			return firstPart.Position
-		end
-		local canReadBoundingBox, modelCFrameOrError = pcall(function()
-			local modelCFrame = target:GetBoundingBox()
-			return modelCFrame
-		end)
-		if canReadBoundingBox then
-			return modelCFrameOrError.Position
-		end
-		return nil
-	end
-	local nestedPart = findFirstBasePart(target)
-	if nestedPart then
-		return nestedPart.Position
-	end
-	return nil
-end
-local CLICK_RAY_DISTANCE = 2048
-local TILE_SAMPLE_GRID_HIGH = 11
-local TILE_SAMPLE_MARGIN = 0.08
-local TILE_SAMPLE_HEIGHT_OFFSET = 0.08
-local RELATIVE_MOVE_MAX_STEP_PIXELS = 120
-local RELATIVE_MOVE_STEP_DELAY_SECONDS = 0.008
-local RELATIVE_MOVE_ARRIVAL_TOLERANCE_PIXELS = 2
-local RELATIVE_MOVE_ARRIVAL_MAX_POLLS = 40
-local RELATIVE_MOVE_ARRIVAL_POLL_DELAY_SECONDS = 0.01
-local RELATIVE_MOVE_RETRY_ATTEMPTS = 2
-local addUniquePoint = function(points, point)
-	if not point then
-		return nil
-	end
-	for _, existing in points do
-		local _point = point
-		if (existing - _point).Magnitude < 0.001 then
-			return nil
-		end
-	end
-	local _points = points
-	local _point = point
-	table.insert(_points, _point)
-end
-local worldPointFromOffset = function(base, offset)
-	local _position = base.Position
-	local _rightVector = base.RightVector
-	local _x = offset.X
-	local _upVector = base.UpVector
-	local _y = offset.Y
-	local _lookVector = base.LookVector
-	local _z = offset.Z
-	return _position + (_rightVector * _x) + (_upVector * _y) + (_lookVector * _z)
-end
-local addPartSamplePoints = function(points, part)
-	local half = part.Size * 0.5
-	local xOffset = math.max(half.X * 0.4, 0.05)
-	local yOffset = math.max(half.Y * 0.9, 0.05)
-	local zOffset = math.max(half.Z * 0.4, 0.05)
-	local offsets = { Vector3.new(0, yOffset, 0), Vector3.new(0, 0, 0), Vector3.new(xOffset, yOffset * 0.75, 0), Vector3.new(-xOffset, yOffset * 0.75, 0), Vector3.new(0, yOffset * 0.75, zOffset), Vector3.new(0, yOffset * 0.75, -zOffset) }
-	for _, offset in offsets do
-		addUniquePoint(points, worldPointFromOffset(part.CFrame, offset))
-	end
-end
-local resolveTileBasePart = function(tile)
-	if tile:IsA("BasePart") then
-		return tile
-	end
-	if tile:IsA("Model") then
-		local meshTile = tile:FindFirstChild("Meshes/tile_a")
-		if meshTile and meshTile:IsA("BasePart") then
-			return meshTile
-		end
-		local tilePart = tile:FindFirstChild("Tile")
-		if tilePart and tilePart:IsA("BasePart") then
-			return tilePart
-		end
-		if tile.PrimaryPart then
-			return tile.PrimaryPart
-		end
-	end
-	return findFirstBasePart(tile)
-end
-local pushUniqueInstance = function(instances, candidate)
-	if not candidate then
-		return nil
-	end
-	for _, existing in instances do
-		if existing == candidate then
-			return nil
-		end
-	end
-	local _instances = instances
-	local _candidate = candidate
-	table.insert(_instances, _candidate)
-end
-local isAllowedTopHit = function(hit, allowed)
-	for _, allowedInstance in allowed do
-		if hit == allowedInstance or hit:IsDescendantOf(allowedInstance) then
-			return true
-		end
-	end
-	return false
-end
-local generateTileTopSamples = function(part, density)
-	local points = {}
-	local gridSize = if density == "high" then TILE_SAMPLE_GRID_HIGH else TILE_SAMPLE_GRID_HIGH
-	local normalizedRange = 1 - TILE_SAMPLE_MARGIN * 2
-	local topOffsetY = part.Size.Y * 0.5 + TILE_SAMPLE_HEIGHT_OFFSET
-	for gridX = 0, gridSize - 1 do
-		local normalizedX = TILE_SAMPLE_MARGIN + (gridX / (gridSize - 1)) * normalizedRange
-		local localX = (normalizedX - 0.5) * part.Size.X
-		for gridZ = 0, gridSize - 1 do
-			local normalizedZ = TILE_SAMPLE_MARGIN + (gridZ / (gridSize - 1)) * normalizedRange
-			local localZ = (normalizedZ - 0.5) * part.Size.Z
-			local centerDistanceSq = (normalizedX - 0.5) ^ 2 + (normalizedZ - 0.5) ^ 2
-			local _arg0 = {
-				point = worldPointFromOffset(part.CFrame, Vector3.new(localX, topOffsetY, localZ)),
-				distanceToCenter = centerDistanceSq,
-			}
-			table.insert(points, _arg0)
-		end
-	end
-	table.sort(points, function(a, b)
-		return a.distanceToCenter < b.distanceToCenter
-	end)
-	local orderedPoints = {}
-	for _, entry in points do
-		local _point = entry.point
-		table.insert(orderedPoints, _point)
-	end
-	return orderedPoints
-end
-local getModelBoundingBox = function(target)
-	local hasBoundingBox, resultOrError = pcall(function()
-		local cframe, size = target:GetBoundingBox()
-		return { cframe, size }
-	end)
-	if not hasBoundingBox then
-		return nil
-	end
-	return resultOrError
-end
-local addBoundingBoxSamplePoints = function(points, boundingBox)
-	local _binding = boundingBox
-	local boxCFrame = _binding[1]
-	local boxSize = _binding[2]
-	local half = boxSize * 0.5
-	local xOffset = math.max(half.X * 0.45, 0.05)
-	local yOffset = math.max(half.Y * 0.95, 0.05)
-	local zOffset = math.max(half.Z * 0.45, 0.05)
-	local offsets = { Vector3.new(0, yOffset, 0), Vector3.new(0, 0, 0), Vector3.new(xOffset, yOffset * 0.7, zOffset), Vector3.new(-xOffset, yOffset * 0.7, zOffset), Vector3.new(xOffset, yOffset * 0.7, -zOffset), Vector3.new(-xOffset, yOffset * 0.7, -zOffset) }
-	for _, offset in offsets do
-		addUniquePoint(points, worldPointFromOffset(boxCFrame, offset))
-	end
-end
-local generatePieceSurfaceSamples = function(target)
-	local points = {}
-	addUniquePoint(points, getInstanceWorldPosition(target))
-	if target:IsA("Attachment") then
-		local _worldPosition = target.WorldPosition
-		local _vector3 = Vector3.new(0, 0.05, 0)
-		addUniquePoint(points, _worldPosition + _vector3)
-		return points
-	end
-	if target:IsA("BasePart") then
-		addPartSamplePoints(points, target)
-		return points
-	end
-	if target:IsA("Model") then
-		local primaryPart = target.PrimaryPart
-		if primaryPart then
-			addPartSamplePoints(points, primaryPart)
-		end
-		local boundingBox = getModelBoundingBox(target)
-		if boundingBox then
-			addBoundingBoxSamplePoints(points, boundingBox)
-		end
-		local sampledParts = 0
-		for _, descendant in target:GetDescendants() do
-			if not descendant:IsA("BasePart") then
-				continue
-			end
-			addPartSamplePoints(points, descendant)
-			sampledParts += 1
-			if sampledParts >= 6 then
-				break
-			end
-		end
-		return points
-	end
-	local fallbackPart = findFirstBasePart(target)
-	if fallbackPart then
-		addPartSamplePoints(points, fallbackPart)
-	end
-	return points
-end
-local buildClickRaycastParams = function()
-	local raycastParams = RaycastParams.new()
-	raycastParams.FilterType = Enum.RaycastFilterType.Exclude
-	raycastParams.IgnoreWater = true
-	local ignoreList = {}
-	local localCharacter = Players.LocalPlayer.Character
-	if localCharacter then
-		table.insert(ignoreList, localCharacter)
-	end
-	raycastParams.FilterDescendantsInstances = ignoreList
-	return raycastParams
-end
-local pickInteriorViewportPoint = function(points)
-	if #points == 1 then
-		return points[1]
-	end
-	local centroidX = 0
-	local centroidY = 0
-	for _, point in points do
-		centroidX += point.X
-		centroidY += point.Y
-	end
-	local pointCount = #points
-	centroidX /= pointCount
-	centroidY /= pointCount
-	local bestPoint = points[1]
-	local bestDistance = math.huge
-	for _, point in points do
-		local deltaX = point.X - centroidX
-		local deltaY = point.Y - centroidY
-		local distance = deltaX * deltaX + deltaY * deltaY
-		if distance < bestDistance then
-			bestDistance = distance
-			bestPoint = point
-		end
-	end
-	return bestPoint
-end
-local resolveTopVisiblePointFromSamples = function(camera, worldPoints, allowedHits, raycastParams, stageName)
-	if #worldPoints == 0 then
-		return { nil, `{stageName}: no candidate points` }
-	end
-	local visibleSampleCount = 0
-	local topHitViewportPoints = {}
-	local firstBlockingHit
-	for _, worldPoint in worldPoints do
-		local viewportPoint, isVisible = camera:WorldToViewportPoint(worldPoint)
-		if not isVisible then
-			continue
-		end
-		visibleSampleCount += 1
-		local ray = camera:ViewportPointToRay(viewportPoint.X, viewportPoint.Y)
-		local hit = Workspace:Raycast(ray.Origin, ray.Direction * CLICK_RAY_DISTANCE, raycastParams)
-		if not hit or not hit.Instance then
-			continue
-		end
-		if not isAllowedTopHit(hit.Instance, allowedHits) then
-			if not (firstBlockingHit ~= "" and firstBlockingHit) then
-				firstBlockingHit = hit.Instance:GetFullName()
-			end
-			continue
-		end
-		local _vector3 = Vector3.new(viewportPoint.X, viewportPoint.Y, viewportPoint.Z)
-		table.insert(topHitViewportPoints, _vector3)
-	end
-	if #topHitViewportPoints > 0 then
-		local interiorPoint = pickInteriorViewportPoint(topHitViewportPoints)
-		return { interiorPoint, `{stageName}: {#topHitViewportPoints} visible top-hit points` }
-	end
-	if visibleSampleCount == 0 then
-		return { nil, `{stageName}: no visible sample point` }
-	end
-	if firstBlockingHit ~= "" and firstBlockingHit then
-		return { nil, `{stageName}: blocked by {firstBlockingHit}` }
-	end
-	return { nil, `{stageName}: no topmost hit` }
-end
-local resolveTopVisibleScreenPoint = function(context)
-	local camera = Workspace.CurrentCamera
-	if not camera then
-		return { nil, `{context.phase} {context.coordinate}: no current camera` }
-	end
-	local raycastParams = buildClickRaycastParams()
-	local tileStage = `{context.phase} {context.coordinate} tile-sampling`
-	local tileSamples = generateTileTopSamples(context.tilePart, "high")
-	local _binding = resolveTopVisiblePointFromSamples(camera, tileSamples, context.allowedHits, raycastParams, tileStage)
-	local tileScreenPoint = _binding[1]
-	local tileReason = _binding[2]
-	if tileScreenPoint then
-		return { tileScreenPoint, tileReason }
-	end
-	if not context.allowPieceSamplingFallback or not context.piece then
-		return { nil, `{context.phase} {context.coordinate}: {tileReason}` }
-	end
-	local pieceSamples = generatePieceSurfaceSamples(context.piece)
-	local pieceStage = `{context.phase} {context.coordinate} piece-sampling`
-	local _binding_1 = resolveTopVisiblePointFromSamples(camera, pieceSamples, context.allowedHits, raycastParams, pieceStage)
-	local pieceScreenPoint = _binding_1[1]
-	local pieceReason = _binding_1[2]
-	if pieceScreenPoint then
-		return { pieceScreenPoint, pieceReason }
-	end
-	return { nil, `{context.phase} {context.coordinate}: {tileReason}; {pieceReason}` }
-end
-local buildClickContext = function(fromX, fromY, toX, toY, targets)
-	local sourceCoordinate = `{fromX},{fromY}`
-	local sourceTile = getTileInstance(fromX, fromY)
-	if not sourceTile then
-		return { nil, `source {sourceCoordinate}: tile not found` }
-	end
-	local sourceTilePart = resolveTileBasePart(sourceTile)
-	if not sourceTilePart then
-		return { nil, `source {sourceCoordinate}: tile base part not found` }
-	end
-	local _result = targets
-	if _result ~= nil then
-		_result = _result.fromTarget
-	end
-	local _condition = _result
-	if _condition == nil then
-		_condition = Board.getPiece(sourceCoordinate)
-	end
-	local sourcePiece = _condition
-	if not sourcePiece then
-		return { nil, `source {sourceCoordinate}: piece not found` }
-	end
-	local sourceAllowedHits = {}
-	pushUniqueInstance(sourceAllowedHits, sourcePiece)
-	pushUniqueInstance(sourceAllowedHits, sourceTile)
-	local destinationCoordinate = `{toX},{toY}`
-	local _condition_1 = getTileInstance(toX, toY)
-	if _condition_1 == nil then
-		local _result_1 = targets
-		if _result_1 ~= nil then
-			_result_1 = _result_1.toTarget
-		end
-		_condition_1 = _result_1
-	end
-	local destinationTile = _condition_1
-	if not destinationTile then
-		return { nil, `destination {destinationCoordinate}: tile not found` }
-	end
-	local destinationTilePart = resolveTileBasePart(destinationTile)
-	if not destinationTilePart then
-		return { nil, `destination {destinationCoordinate}: tile base part not found` }
-	end
-	local destinationPiece = Board.getPiece(destinationCoordinate)
-	local destinationAllowedHits = {}
-	if destinationPiece then
-		pushUniqueInstance(destinationAllowedHits, destinationPiece)
-	end
-	pushUniqueInstance(destinationAllowedHits, destinationTile)
-	local sourceContext = {
-		phase = "source",
-		coordinate = sourceCoordinate,
-		tile = sourceTile,
-		tilePart = sourceTilePart,
-		piece = sourcePiece,
-		button = "left",
-		allowedHits = sourceAllowedHits,
-		allowPieceSamplingFallback = true,
-	}
-	local destinationContext = {
-		phase = "destination",
-		coordinate = destinationCoordinate,
-		tile = destinationTile,
-		tilePart = destinationTilePart,
-		piece = destinationPiece,
-		button = "left",
-		allowedHits = destinationAllowedHits,
-		allowPieceSamplingFallback = destinationPiece ~= nil,
-	}
-	return { {
-		source = sourceContext,
-		destination = destinationContext,
-	}, "ok" }
-end
-local moveRelativeChunked = function(deltaX, deltaY)
-	local remainingX = deltaX
-	local remainingY = deltaY
-	while remainingX ~= 0 or remainingY ~= 0 do
-		local stepX = if math.abs(remainingX) > RELATIVE_MOVE_MAX_STEP_PIXELS then RELATIVE_MOVE_MAX_STEP_PIXELS * math.sign(remainingX) else remainingX
-		local stepY = if math.abs(remainingY) > RELATIVE_MOVE_MAX_STEP_PIXELS then RELATIVE_MOVE_MAX_STEP_PIXELS * math.sign(remainingY) else remainingY
-		local didMoveStep, stepError = pcall(function()
-			return mousemoverel(stepX, stepY)
-		end)
-		if not didMoveStep then
-			return { false, `mousemoverel failed ({stepError})` }
-		end
-		remainingX -= stepX
-		remainingY -= stepY
-		task.wait(RELATIVE_MOVE_STEP_DELAY_SECONDS)
-	end
-	return { true, "mouse moved(rel) by chunked delta" }
-end
-local getCursorOffsetToTarget = function(targetX, targetY)
-	local cursor = UserInputService:GetMouseLocation()
-	local offsetX = targetX - math.floor(cursor.X)
-	local offsetY = targetY - math.floor(cursor.Y)
-	return { offsetX, offsetY }
-end
-local waitCursorArrival = function(targetX, targetY)
-	local finalOffsetX = 0
-	local finalOffsetY = 0
-	for i = 0, RELATIVE_MOVE_ARRIVAL_MAX_POLLS - 1 do
-		local _binding = getCursorOffsetToTarget(targetX, targetY)
-		local offsetX = _binding[1]
-		local offsetY = _binding[2]
-		finalOffsetX = offsetX
-		finalOffsetY = offsetY
-		if math.abs(offsetX) <= RELATIVE_MOVE_ARRIVAL_TOLERANCE_PIXELS and math.abs(offsetY) <= RELATIVE_MOVE_ARRIVAL_TOLERANCE_PIXELS then
-			return { true, offsetX, offsetY }
-		end
-		task.wait(RELATIVE_MOVE_ARRIVAL_POLL_DELAY_SECONDS)
-	end
-	return { false, finalOffsetX, finalOffsetY }
-end
-local moveMouseToScreen = function(screenPosition, moveMode, relativeAnchor)
-	local targetX = math.floor(screenPosition.X)
-	local targetY = math.floor(screenPosition.Y)
-	if moveMode == "absolute" then
-		if not ensure_executor_functions_access(mousemoveabs) then
-			return { false, "mousemoveabs is not supported by current executor" }
-		end
-		local didMoveAbsolute, absoluteError = pcall(function()
-			return mousemoveabs(targetX, targetY)
-		end)
-		if not didMoveAbsolute then
-			return { false, `mousemoveabs failed ({absoluteError})` }
-		end
-		lastInjectedMousePosition = Vector2.new(targetX, targetY)
-		task.wait(0.02)
-		return { true, `mouse moved(abs) to {targetX},{targetY}` }
-	end
-	if not ensure_executor_functions_access(mousemoverel) then
-		return { false, "mousemoverel is not supported by current executor" }
-	end
-	local anchor = relativeAnchor or lastInjectedMousePosition or UserInputService:GetMouseLocation()
-	local deltaX = targetX - math.floor(anchor.X)
-	local deltaY = targetY - math.floor(anchor.Y)
-	for attempt = 0, RELATIVE_MOVE_RETRY_ATTEMPTS do
-		local _binding = moveRelativeChunked(deltaX, deltaY)
-		local didMoveRelative = _binding[1]
-		local moveError = _binding[2]
-		if not didMoveRelative then
-			return { false, `{moveError}` }
-		end
-		local _binding_1 = waitCursorArrival(targetX, targetY)
-		local arrived = _binding_1[1]
-		local offsetX = _binding_1[2]
-		local offsetY = _binding_1[3]
-		if arrived then
-			task.wait(0.02)
-			lastInjectedMousePosition = Vector2.new(targetX, targetY)
-			return { true, `mouse moved(rel) to {targetX},{targetY}` }
-		end
-		if attempt >= RELATIVE_MOVE_RETRY_ATTEMPTS then
-			return { false, `mousemoverel not settled (dx={offsetX}, dy={offsetY})` }
-		end
-		deltaX = offsetX
-		deltaY = offsetY
-	end
-	return { false, "mousemoverel not settled (unknown)" }
-end
-local clickContextViaMouseApi = function(context, relativeAnchor)
-	local _binding = resolveTopVisibleScreenPoint(context)
-	local screenPosition = _binding[1]
-	local pointMessage = _binding[2]
-	if not screenPosition then
-		return { false, `{context.phase} {context.coordinate} failed ({pointMessage})`, nil }
-	end
-	local moveMode = if context.phase == "source" then "absolute" else "relative"
-	local _binding_1 = moveMouseToScreen(screenPosition, moveMode, relativeAnchor)
-	local didMove = _binding_1[1]
-	local moveMessage = _binding_1[2]
-	if not didMove then
-		return { false, `{context.phase} {context.coordinate} failed ({moveMessage})`, nil }
-	end
-	task.wait(mouseClickDelaySeconds)
-	local didClick, clickError = pcall(function()
-		mouse1click()
-	end)
-	if not didClick then
-		return { false, `{context.phase} {context.coordinate} click failed ({clickError})`, nil }
-	end
-	task.wait(0.03)
-	local clickedPoint = Vector2.new(math.floor(screenPosition.X), math.floor(screenPosition.Y))
-	return { true, `{context.button} clicked {context.phase} {context.coordinate} @ screen({math.floor(screenPosition.X)},{math.floor(screenPosition.Y)}) ({pointMessage})`, clickedPoint }
-end
-local executeRemoteEvent = function(move, board)
-	local movePieceEvent = getMovePieceEvent()
-	if not movePieceEvent then
-		return { false, "MovePiece remote not found" }
-	end
-	local matchId = updateMatchIdFromBoard(board)
-	if matchId == nil then
-		return { false, "invalid match id" }
-	end
-	local fromX, fromY, toX, toY = getPosFromResult(move)
-	local fromPosition = { fromX, fromY }
-	local toPosition = { toX, toY }
-	local pieceData = board:getPieceDataAt(fromX, fromY)
-	local pieceName = getPieceName(pieceData)
-	local isPawn = pieceName == "Pawn"
-	if isPawn then
-		toPosition.doubleStep = resolveDoubleStep(pieceData)
-		if fromX == toX then
-			toPosition.moveOnly = true
-		end
-	end
-	local fired, errorMessage = pcall(function()
-		return movePieceEvent:FireServer(matchId, fromPosition, toPosition, {})
-	end)
-	if not fired then
-		return { false, `failed to fire MovePiece ({errorMessage})` }
-	end
-	return { true, `remote sent: id={matchId}, move={move}` }
-end
-local executeMouseApi = function(move, _board, targets)
-	if not ensure_executor_functions_access(mousemoveabs, mousemoverel, mouse1click) then
-		return { false, "mouse API is not supported by current executor" }
-	end
-	local fromX, fromY, toX, toY = getPosFromResult(move)
-	local _binding = buildClickContext(fromX, fromY, toX, toY, targets)
-	local clickContext = _binding[1]
-	local contextMessage = _binding[2]
-	if not clickContext then
-		return { false, contextMessage }
-	end
-	local _binding_1 = clickContextViaMouseApi(clickContext.source)
-	local didClickFrom = _binding_1[1]
-	local fromClickMessage = _binding_1[2]
-	local fromClickedPoint = _binding_1[3]
-	if not didClickFrom then
-		return { false, fromClickMessage }
-	end
-	task.wait(mouseStepDelaySeconds)
-	local _binding_2 = clickContextViaMouseApi(clickContext.destination, fromClickedPoint)
-	local didClickTo = _binding_2[1]
-	local toClickMessage = _binding_2[2]
-	if not didClickTo then
-		return { false, toClickMessage }
-	end
-	return { true, `mouse move sent: {move} ({fromClickMessage}; {toClickMessage})` }
-end
-local api = {
-	startMatchIdListener = function()
-		if hasStartedListener then
-			return { true, "start game listener already active" }
-		end
-		local connections = getConnectionsFolder()
-		if not connections then
-			return { false, "Connections folder not found" }
-		end
-		local startGame = connections:FindFirstChild("StartGame")
-		if not startGame or not startGame:IsA("RemoteEvent") then
-			return { false, "StartGame remote not found" }
-		end
-		startGame.OnClientEvent:Connect(function(payload)
-			if type(payload) ~= "table" then
-				return nil
-			end
-			local id = parseNumber(payload.id)
-			if id ~= nil then
-				lastMatchId = id
-			end
-		end)
-		hasStartedListener = true
-		return { true, "start game listener connected" }
+    [24] = function()local wax,script,require=ImportGlobals(24)local ImportGlobals return (function(...)return setmetatable({}, {
+	__index = function(self, serviceName)
+		local service = game:GetService(serviceName)
+		self[serviceName] = service
+		return service
 	end,
-	getCurrentMatchId = function(board)
-		return updateMatchIdFromBoard(board)
-	end,
-	supportsMouseApi = function()
-		return ensure_executor_functions_access(mousemoveabs, mousemoverel, mouse1click)
-	end,
-	setMouseStepDelaySeconds = function(seconds)
-		if type(seconds) ~= "number" then
-			return nil
-		end
-		mouseStepDelaySeconds = math.clamp(seconds, 0.01, 5)
-	end,
-	setMouseClickDelaySeconds = function(seconds)
-		if type(seconds) ~= "number" then
-			return nil
-		end
-		mouseClickDelaySeconds = math.clamp(seconds, 0.01, 5)
-	end,
-	execute = function(move, board, method, targets)
-		if method == "Mouse API" then
-			return executeMouseApi(move, board, targets)
-		end
-		return executeRemoteEvent(move, board)
-	end,
-}
-return api
+})
 
 end)() end
 } -- [RefId] = Closure
@@ -8547,176 +8744,6 @@ local ObjectTree = {
                 4,
                 {
                     "main"
-                }
-            },
-            {
-                17,
-                1,
-                {
-                    "include"
-                },
-                {
-                    {
-                        18,
-                        2,
-                        {
-                            "Promise"
-                        }
-                    },
-                    {
-                        19,
-                        2,
-                        {
-                            "RuntimeLib"
-                        }
-                    },
-                    {
-                        20,
-                        1,
-                        {
-                            "node_modules"
-                        },
-                        {
-                            {
-                                21,
-                                1,
-                                {
-                                    "@rbxts"
-                                },
-                                {
-                                    {
-                                        25,
-                                        1,
-                                        {
-                                            "types"
-                                        },
-                                        {
-                                            {
-                                                26,
-                                                1,
-                                                {
-                                                    "include"
-                                                },
-                                                {
-                                                    {
-                                                        27,
-                                                        1,
-                                                        {
-                                                            "generated"
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    },
-                                    {
-                                        24,
-                                        2,
-                                        {
-                                            "services"
-                                        }
-                                    },
-                                    {
-                                        22,
-                                        1,
-                                        {
-                                            "compiler-types"
-                                        },
-                                        {
-                                            {
-                                                23,
-                                                1,
-                                                {
-                                                    "types"
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            },
-            {
-                6,
-                1,
-                {
-                    "utils"
-                },
-                {
-                    {
-                        9,
-                        2,
-                        {
-                            "HttpGet"
-                        }
-                    },
-                    {
-                        8,
-                        2,
-                        {
-                            "Highlighter"
-                        }
-                    },
-                    {
-                        12,
-                        2,
-                        {
-                            "destoryErrorLogging"
-                        }
-                    },
-                    {
-                        7,
-                        2,
-                        {
-                            "CoreGui"
-                        }
-                    },
-                    {
-                        10,
-                        1,
-                        {
-                            "LuaFuncs"
-                        },
-                        {
-                            {
-                                11,
-                                2,
-                                {
-                                    "board"
-                                }
-                            }
-                        }
-                    },
-                    {
-                        13,
-                        2,
-                        {
-                            "findBestMove"
-                        }
-                    },
-                    {
-                        14,
-                        2,
-                        {
-                            "findOrCreateInstance"
-                        }
-                    },
-                    {
-                        15,
-                        2,
-                        {
-                            "getPosFromResult"
-                        }
-                    },
-                    {
-                        16,
-                        2,
-                        {
-                            "remoteAutoplay"
-                        }
-                    }
                 }
             },
             {
@@ -8741,6 +8768,176 @@ local ObjectTree = {
                         }
                     }
                 }
+            },
+            {
+                6,
+                1,
+                {
+                    "utils"
+                },
+                {
+                    {
+                        12,
+                        2,
+                        {
+                            "destoryErrorLogging"
+                        }
+                    },
+                    {
+                        15,
+                        2,
+                        {
+                            "getPosFromResult"
+                        }
+                    },
+                    {
+                        16,
+                        2,
+                        {
+                            "remoteAutoplay"
+                        }
+                    },
+                    {
+                        10,
+                        1,
+                        {
+                            "LuaFuncs"
+                        },
+                        {
+                            {
+                                11,
+                                2,
+                                {
+                                    "board"
+                                }
+                            }
+                        }
+                    },
+                    {
+                        8,
+                        2,
+                        {
+                            "Highlighter"
+                        }
+                    },
+                    {
+                        9,
+                        2,
+                        {
+                            "HttpGet"
+                        }
+                    },
+                    {
+                        13,
+                        2,
+                        {
+                            "findBestMove"
+                        }
+                    },
+                    {
+                        14,
+                        2,
+                        {
+                            "findOrCreateInstance"
+                        }
+                    },
+                    {
+                        7,
+                        2,
+                        {
+                            "CoreGui"
+                        }
+                    }
+                }
+            },
+            {
+                17,
+                1,
+                {
+                    "include"
+                },
+                {
+                    {
+                        20,
+                        1,
+                        {
+                            "node_modules"
+                        },
+                        {
+                            {
+                                21,
+                                1,
+                                {
+                                    "@rbxts"
+                                },
+                                {
+                                    {
+                                        22,
+                                        1,
+                                        {
+                                            "compiler-types"
+                                        },
+                                        {
+                                            {
+                                                23,
+                                                1,
+                                                {
+                                                    "types"
+                                                }
+                                            }
+                                        }
+                                    },
+                                    {
+                                        24,
+                                        2,
+                                        {
+                                            "services"
+                                        }
+                                    },
+                                    {
+                                        25,
+                                        1,
+                                        {
+                                            "types"
+                                        },
+                                        {
+                                            {
+                                                26,
+                                                1,
+                                                {
+                                                    "include"
+                                                },
+                                                {
+                                                    {
+                                                        27,
+                                                        1,
+                                                        {
+                                                            "generated"
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    {
+                        19,
+                        2,
+                        {
+                            "RuntimeLib"
+                        }
+                    },
+                    {
+                        18,
+                        2,
+                        {
+                            "Promise"
+                        }
+                    }
+                }
             }
         }
     }
@@ -8748,21 +8945,21 @@ local ObjectTree = {
 
 -- Line offsets for debugging (only included when minifyTables is false)
 local LineOffsets = {
-    [12] = 8,
-    [9] = 24,
-    [24] = 75,
-    [3] = 84,
-    [11] = 4010,
-    [5] = 4372,
-    [4] = 4653,
-    [7] = 5129,
-    [18] = 5133,
-    [13] = 7203,
-    [19] = 7524,
-    [8] = 7353,
-    [15] = 7325,
-    [14] = 7786,
-    [16] = 7799
+    [3] = 8,
+    [4] = 3934,
+    [5] = 4410,
+    [7] = 4691,
+    [8] = 4695,
+    [9] = 4866,
+    [11] = 4917,
+    [12] = 5279,
+    [13] = 5295,
+    [14] = 5417,
+    [15] = 5430,
+    [16] = 5458,
+    [19] = 6256,
+    [18] = 6518,
+    [24] = 8588
 }
 
 -- Misc AOT variable imports

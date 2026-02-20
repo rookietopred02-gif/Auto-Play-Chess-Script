@@ -52,8 +52,9 @@ export = (
     }
 
     const endpoint = options?.endpoint ?? "http://127.0.0.1:3000"
+    const queryNonce = math.floor(os.clock() * 1000)
     const [requestSucceeded, response] = HttpGet(
-        `${endpoint}/api/solve?fen=${HttpService.UrlEncode(fen)}&depth=${depth}&max_think_time=${maxThinkTime}&disregard_think_time=${disregardThinkTime}`,
+        `${endpoint}/api/solve?fen=${HttpService.UrlEncode(fen)}&depth=${depth}&max_think_time=${maxThinkTime}&disregard_think_time=${disregardThinkTime}&_q=${queryNonce}`,
         {
             retries: options?.retries ?? 1,
         }

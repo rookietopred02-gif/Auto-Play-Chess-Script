@@ -1,4 +1,5 @@
 import {
+    Debris,
     Players,
     ReplicatedStorage,
     UserInputService,
@@ -43,9 +44,8 @@ interface RemoteAutoplayApi {
 
 let lastMatchId: number | undefined
 let hasStartedListener = false
-let lastInjectedMousePosition: Vector2 | undefined
-let mouseStepDelaySeconds = 0.2
-let mouseClickDelaySeconds = 0.05
+let mouseStepDelaySeconds = 0
+let mouseClickDelaySeconds = 0
 
 const getConnectionsFolder = (): Folder | undefined => {
     const connections = ReplicatedStorage.FindFirstChild("Connections")
@@ -220,12 +220,10 @@ const CLICK_RAY_DISTANCE = 2048
 const TILE_SAMPLE_GRID_HIGH = 11
 const TILE_SAMPLE_MARGIN = 0.08
 const TILE_SAMPLE_HEIGHT_OFFSET = 0.08
-const RELATIVE_MOVE_MAX_STEP_PIXELS = 120
-const RELATIVE_MOVE_STEP_DELAY_SECONDS = 0.008
-const RELATIVE_MOVE_ARRIVAL_TOLERANCE_PIXELS = 2
-const RELATIVE_MOVE_ARRIVAL_MAX_POLLS = 40
-const RELATIVE_MOVE_ARRIVAL_POLL_DELAY_SECONDS = 0.01
-const RELATIVE_MOVE_RETRY_ATTEMPTS = 2
+const DEBUG_POINT_MARKER_SIZE = 0.1
+const DEBUG_POINT_MARKER_LIFETIME_SECONDS = 6
+const DEBUG_POINT_MARKER_WORLD_OFFSET_Y = 0.08
+const DEBUG_POINT_MARKER_PIXEL_SIZE = 18
 
 type ClickPhase = "source" | "destination"
 
@@ -245,7 +243,10 @@ interface MoveClickContext {
     destination: ClickResolutionContext
 }
 
-type MouseMoveMode = "absolute" | "relative"
+interface SampleHitPoint {
+    screen: Vector3
+    world: Vector3
+}
 
 const addUniquePoint = (points: Vector3[], point: Vector3 | undefined): void => {
     if (!point) {
@@ -333,6 +334,84 @@ const isAllowedTopHit = (hit: Instance, allowed: Instance[]): boolean => {
     }
 
     return false
+}
+
+const getDebugPointStorage = (): Folder => {
+    const existing = Workspace.FindFirstChild("AutoPlayDebugPoints")
+    if (existing && existing.IsA("Folder")) {
+        return existing
+    }
+
+    const folder = new Instance("Folder")
+    folder.Name = "AutoPlayDebugPoints"
+    folder.Parent = Workspace
+    return folder
+}
+
+const createDebugPointMarker = (
+    worldPoint: Vector3,
+    phase: ClickPhase
+): void => {
+    const markerColor =
+        phase === "source"
+            ? Color3.fromRGB(24, 255, 170)
+            : Color3.fromRGB(255, 166, 46)
+
+    const marker = new Instance("Part")
+    marker.Name = phase === "source" ? "AutoPlaySourcePoint" : "AutoPlayDestinationPoint"
+    marker.Shape = Enum.PartType.Ball
+    marker.Material = Enum.Material.SmoothPlastic
+    marker.Color = markerColor
+    marker.Size = new Vector3(
+        DEBUG_POINT_MARKER_SIZE,
+        DEBUG_POINT_MARKER_SIZE,
+        DEBUG_POINT_MARKER_SIZE
+    )
+    marker.Transparency = 1
+    marker.Anchored = true
+    marker.CanCollide = false
+    marker.CanTouch = false
+    marker.CanQuery = false
+    marker.CastShadow = false
+    marker.CFrame = new CFrame(
+        worldPoint.add(new Vector3(0, DEBUG_POINT_MARKER_WORLD_OFFSET_Y, 0))
+    )
+    marker.Parent = getDebugPointStorage()
+
+    const billboard = new Instance("BillboardGui")
+    billboard.Name = "DebugPoint"
+    billboard.AlwaysOnTop = true
+    billboard.LightInfluence = 0
+    billboard.ResetOnSpawn = false
+    billboard.Size = UDim2.fromOffset(
+        DEBUG_POINT_MARKER_PIXEL_SIZE,
+        DEBUG_POINT_MARKER_PIXEL_SIZE
+    )
+    billboard.Parent = marker
+
+    const dot = new Instance("Frame")
+    dot.Name = "Dot"
+    dot.AnchorPoint = new Vector2(0.5, 0.5)
+    dot.Position = UDim2.fromScale(0.5, 0.5)
+    dot.Size = UDim2.fromScale(1, 1)
+    dot.BackgroundColor3 = markerColor
+    dot.BorderSizePixel = 0
+    dot.Parent = billboard
+
+    const dotCorner = new Instance("UICorner")
+    dotCorner.CornerRadius = new UDim(1, 0)
+    dotCorner.Parent = dot
+
+    const dotStroke = new Instance("UIStroke")
+    dotStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    dotStroke.Thickness = 2
+    dotStroke.Color =
+        phase === "source"
+            ? Color3.fromRGB(0, 70, 50)
+            : Color3.fromRGB(92, 56, 0)
+    dotStroke.Parent = dot
+
+    Debris.AddItem(marker, DEBUG_POINT_MARKER_LIFETIME_SECONDS)
 }
 
 const generateTileTopSamples = (part: BasePart, density: "high"): Vector3[] => {
@@ -474,7 +553,7 @@ const buildClickRaycastParams = (): RaycastParams => {
     return raycastParams
 }
 
-const pickInteriorViewportPoint = (points: Vector3[]): Vector3 => {
+const pickInteriorSampleHitPoint = (points: SampleHitPoint[]): SampleHitPoint => {
     if (points.size() === 1) {
         return points[0]
     }
@@ -482,8 +561,8 @@ const pickInteriorViewportPoint = (points: Vector3[]): Vector3 => {
     let centroidX = 0
     let centroidY = 0
     for (const point of points) {
-        centroidX += point.X
-        centroidY += point.Y
+        centroidX += point.screen.X
+        centroidY += point.screen.Y
     }
 
     const pointCount = points.size()
@@ -493,8 +572,8 @@ const pickInteriorViewportPoint = (points: Vector3[]): Vector3 => {
     let bestPoint = points[0]
     let bestDistance = math.huge
     for (const point of points) {
-        const deltaX = point.X - centroidX
-        const deltaY = point.Y - centroidY
+        const deltaX = point.screen.X - centroidX
+        const deltaY = point.screen.Y - centroidY
         const distance = deltaX * deltaX + deltaY * deltaY
         if (distance < bestDistance) {
             bestDistance = distance
@@ -511,24 +590,24 @@ const resolveTopVisiblePointFromSamples = (
     allowedHits: Instance[],
     raycastParams: RaycastParams,
     stageName: string
-): [Vector3 | undefined, string] => {
+): [SampleHitPoint | undefined, string] => {
     if (worldPoints.size() === 0) {
         return [undefined, `${stageName}: no candidate points`]
     }
 
     let visibleSampleCount = 0
-    const topHitViewportPoints: Vector3[] = []
+    const topHitPoints: SampleHitPoint[] = []
     let firstBlockingHit: string | undefined
 
     for (const worldPoint of worldPoints) {
-        const [viewportPoint, isVisible] = camera.WorldToViewportPoint(worldPoint)
+        const [screenPoint, isVisible] = camera.WorldToScreenPoint(worldPoint)
         if (!isVisible) {
             continue
         }
 
         visibleSampleCount += 1
 
-        const ray = camera.ViewportPointToRay(viewportPoint.X, viewportPoint.Y)
+        const ray = camera.ScreenPointToRay(screenPoint.X, screenPoint.Y)
         const hit = Workspace.Raycast(
             ray.Origin,
             ray.Direction.mul(CLICK_RAY_DISTANCE),
@@ -545,16 +624,17 @@ const resolveTopVisiblePointFromSamples = (
             }
             continue
         }
-        topHitViewportPoints.push(
-            new Vector3(viewportPoint.X, viewportPoint.Y, viewportPoint.Z)
-        )
+        topHitPoints.push({
+            screen: new Vector3(screenPoint.X, screenPoint.Y, screenPoint.Z),
+            world: hit.Position,
+        })
     }
 
-    if (topHitViewportPoints.size() > 0) {
-        const interiorPoint = pickInteriorViewportPoint(topHitViewportPoints)
+    if (topHitPoints.size() > 0) {
+        const interiorPoint = pickInteriorSampleHitPoint(topHitPoints)
         return [
             interiorPoint,
-            `${stageName}: ${topHitViewportPoints.size()} visible top-hit points`,
+            `${stageName}: ${topHitPoints.size()} visible top-hit points`,
         ]
     }
 
@@ -571,7 +651,7 @@ const resolveTopVisiblePointFromSamples = (
 
 const resolveTopVisibleScreenPoint = (
     context: ClickResolutionContext
-): [Vector3 | undefined, string] => {
+): [SampleHitPoint | undefined, string] => {
     const camera = Workspace.CurrentCamera
     if (!camera) {
         return [undefined, `${context.phase} ${context.coordinate}: no current camera`]
@@ -681,7 +761,8 @@ const buildClickContext = (
         piece: destinationPiece,
         button: "left",
         allowedHits: destinationAllowedHits,
-        allowPieceSamplingFallback: destinationPiece !== undefined,
+        // Keep destination targeting on tile interior samples only.
+        allowPieceSamplingFallback: false,
     }
 
     return [
@@ -693,179 +774,154 @@ const buildClickContext = (
     ]
 }
 
-const moveRelativeChunked = (
-    deltaX: number,
-    deltaY: number
-): [boolean, string] => {
-    let remainingX = deltaX
-    let remainingY = deltaY
-
-    while (remainingX !== 0 || remainingY !== 0) {
-        const stepX =
-            math.abs(remainingX) > RELATIVE_MOVE_MAX_STEP_PIXELS
-                ? RELATIVE_MOVE_MAX_STEP_PIXELS * math.sign(remainingX)
-                : remainingX
-        const stepY =
-            math.abs(remainingY) > RELATIVE_MOVE_MAX_STEP_PIXELS
-                ? RELATIVE_MOVE_MAX_STEP_PIXELS * math.sign(remainingY)
-                : remainingY
-
-        const [didMoveStep, stepError] = pcall(() => mousemoverel(stepX, stepY))
-        if (!didMoveStep) {
-            return [false, `mousemoverel failed (${stepError})`]
-        }
-
-        remainingX -= stepX
-        remainingY -= stepY
-        task.wait(RELATIVE_MOVE_STEP_DELAY_SECONDS)
-    }
-
-    return [true, "mouse moved(rel) by chunked delta"]
+const getCurrentCursorPosition = (): Vector2 => {
+    const cursor = UserInputService.GetMouseLocation()
+    return new Vector2(math.floor(cursor.X), math.floor(cursor.Y))
 }
 
-const getCursorOffsetToTarget = (
+const moveRelativeToTarget = (
     targetX: number,
     targetY: number
-): [number, number] => {
-    const cursor = UserInputService.GetMouseLocation()
-    const offsetX = targetX - math.floor(cursor.X)
-    const offsetY = targetY - math.floor(cursor.Y)
-    return [offsetX, offsetY]
-}
-
-const waitCursorArrival = (targetX: number, targetY: number): [boolean, number, number] => {
-    let finalOffsetX = 0
-    let finalOffsetY = 0
-
-    for (let i = 0; i < RELATIVE_MOVE_ARRIVAL_MAX_POLLS; i++) {
-        const [offsetX, offsetY] = getCursorOffsetToTarget(targetX, targetY)
-        finalOffsetX = offsetX
-        finalOffsetY = offsetY
-
-        if (
-            math.abs(offsetX) <= RELATIVE_MOVE_ARRIVAL_TOLERANCE_PIXELS &&
-            math.abs(offsetY) <= RELATIVE_MOVE_ARRIVAL_TOLERANCE_PIXELS
-        ) {
-            return [true, offsetX, offsetY]
-        }
-
-        task.wait(RELATIVE_MOVE_ARRIVAL_POLL_DELAY_SECONDS)
-    }
-
-    return [false, finalOffsetX, finalOffsetY]
-}
-
-const moveMouseToScreen = (
-    screenPosition: Vector3,
-    moveMode: MouseMoveMode,
-    relativeAnchor?: Vector2
 ): [boolean, string] => {
-    const targetX = math.floor(screenPosition.X)
-    const targetY = math.floor(screenPosition.Y)
+    const cursor = getCurrentCursorPosition()
+    const deltaX = targetX - cursor.X
+    const deltaY = targetY - cursor.Y
 
-    if (moveMode === "absolute") {
-        if (!ensure_executor_functions_access(mousemoveabs)) {
-            return [false, "mousemoveabs is not supported by current executor"]
-        }
-
-        const [didMoveAbsolute, absoluteError] = pcall(() =>
-            mousemoveabs(targetX, targetY)
-        )
-        if (!didMoveAbsolute) {
-            return [false, `mousemoveabs failed (${absoluteError})`]
-        }
-
-        lastInjectedMousePosition = new Vector2(targetX, targetY)
-        task.wait(0.02)
-        return [true, `mouse moved(abs) to ${targetX},${targetY}`]
+    const [didMoveRelative, moveError] = pcall(() =>
+        mousemoverel(deltaX, deltaY)
+    )
+    if (!didMoveRelative) {
+        return [false, `mousemoverel failed (${moveError})`]
     }
 
-    if (!ensure_executor_functions_access(mousemoverel)) {
-        return [false, "mousemoverel is not supported by current executor"]
-    }
-
-    const anchor =
-        relativeAnchor ?? lastInjectedMousePosition ?? UserInputService.GetMouseLocation()
-    let deltaX = targetX - math.floor(anchor.X)
-    let deltaY = targetY - math.floor(anchor.Y)
-
-    for (let attempt = 0; attempt <= RELATIVE_MOVE_RETRY_ATTEMPTS; attempt++) {
-        const [didMoveRelative, moveError] = moveRelativeChunked(deltaX, deltaY)
-        if (!didMoveRelative) {
-            return [false, `${moveError}`]
-        }
-
-        const [arrived, offsetX, offsetY] = waitCursorArrival(targetX, targetY)
-        if (arrived) {
-            task.wait(0.02)
-            lastInjectedMousePosition = new Vector2(targetX, targetY)
-            return [true, `mouse moved(rel) to ${targetX},${targetY}`]
-        }
-
-        if (attempt >= RELATIVE_MOVE_RETRY_ATTEMPTS) {
-            return [
-                false,
-                `mousemoverel not settled (dx=${offsetX}, dy=${offsetY})`,
-            ]
-        }
-
-        deltaX = offsetX
-        deltaY = offsetY
-    }
-
-    return [false, "mousemoverel not settled (unknown)"]
+    return [true, `mouse moved(rel-direct) to ${targetX},${targetY}`]
 }
 
-const clickContextViaMouseApi = (
-    context: ClickResolutionContext,
-    relativeAnchor?: Vector2
-): [boolean, string, Vector2 | undefined] => {
-    const [screenPosition, pointMessage] = resolveTopVisibleScreenPoint(context)
-    if (!screenPosition) {
-        return [
-            false,
-            `${context.phase} ${context.coordinate} failed (${pointMessage})`,
-            undefined,
-        ]
+const ensureExactCursorAtTarget = (
+    targetX: number,
+    targetY: number
+): [boolean, number, number] => {
+    let finalDeltaX = 0
+    let finalDeltaY = 0
+
+    for (let attempt = 0; attempt < 4; attempt++) {
+        const cursor = getCurrentCursorPosition()
+        const deltaX = targetX - cursor.X
+        const deltaY = targetY - cursor.Y
+        finalDeltaX = deltaX
+        finalDeltaY = deltaY
+        if (deltaX === 0 && deltaY === 0) {
+            return [true, 0, 0]
+        }
+
+        const [didCorrect] = pcall(() => mousemoverel(deltaX, deltaY))
+        if (!didCorrect) {
+            return [false, deltaX, deltaY]
+        }
     }
 
-    const moveMode: MouseMoveMode =
-        context.phase === "source" ? "absolute" : "relative"
-    const [didMove, moveMessage] = moveMouseToScreen(
-        screenPosition,
-        moveMode,
-        relativeAnchor
-    )
+    return [false, finalDeltaX, finalDeltaY]
+}
+
+const applyClickNudge = (): [boolean, string] => {
+    const [didNudgeOut, nudgeOutError] = pcall(() => mousemoverel(1, 1))
+    if (!didNudgeOut) {
+        return [false, `mousemoverel nudge-out failed (${nudgeOutError})`]
+    }
+
+    const [didNudgeBack, nudgeBackError] = pcall(() => mousemoverel(-1, -1))
+    if (!didNudgeBack) {
+        return [false, `mousemoverel nudge-back failed (${nudgeBackError})`]
+    }
+
+    return [true, "nudge ok"]
+}
+
+const clickSourceContext = (
+    context: ClickResolutionContext,
+    resolvedPoint: SampleHitPoint,
+    pointMessage: string
+): [boolean, string, Vector2 | undefined] => {
+    const targetX = math.round(resolvedPoint.screen.X)
+    const targetY = math.round(resolvedPoint.screen.Y)
+
+    const [didMove, moveMessage] = moveRelativeToTarget(targetX, targetY)
     if (!didMove) {
+        return [false, `${context.phase} ${context.coordinate} failed (${moveMessage})`, undefined]
+    }
+
+    const [isExactAfterMove, dxAfterMove, dyAfterMove] = ensureExactCursorAtTarget(
+        targetX,
+        targetY
+    )
+    if (!isExactAfterMove) {
         return [
             false,
-            `${context.phase} ${context.coordinate} failed (${moveMessage})`,
+            `${context.phase} ${context.coordinate} failed (not exact after move: dx=${dxAfterMove}, dy=${dyAfterMove})`,
             undefined,
         ]
     }
 
     task.wait(mouseClickDelaySeconds)
+    mouse1click()
 
-    const [didClick, clickError] = pcall(() => {
-        mouse1click()
-    })
+    const clickedPoint = getCurrentCursorPosition()
+    return [
+        true,
+        `${context.button} clicked ${context.phase} ${context.coordinate} @ screen(${clickedPoint.X},${clickedPoint.Y}) world(${math.round(resolvedPoint.world.X * 100) / 100},${math.round(resolvedPoint.world.Y * 100) / 100},${math.round(resolvedPoint.world.Z * 100) / 100}) (${pointMessage})`,
+        clickedPoint,
+    ]
+}
 
-    if (!didClick) {
+const clickDestinationContext = (
+    context: ClickResolutionContext,
+    resolvedPoint: SampleHitPoint,
+    pointMessage: string
+): [boolean, string, Vector2 | undefined] => {
+    const targetX = math.round(resolvedPoint.screen.X)
+    const targetY = math.round(resolvedPoint.screen.Y)
+
+    const [didMove, moveMessage] = moveRelativeToTarget(targetX, targetY)
+    if (!didMove) {
+        return [false, `${context.phase} ${context.coordinate} failed (${moveMessage})`, undefined]
+    }
+
+    const [isExactAfterMove, dxAfterMove, dyAfterMove] = ensureExactCursorAtTarget(
+        targetX,
+        targetY
+    )
+    if (!isExactAfterMove) {
         return [
             false,
-            `${context.phase} ${context.coordinate} click failed (${clickError})`,
+            `${context.phase} ${context.coordinate} failed (not exact after move: dx=${dxAfterMove}, dy=${dyAfterMove})`,
             undefined,
         ]
     }
 
-    task.wait(0.03)
-    const clickedPoint = new Vector2(
-        math.floor(screenPosition.X),
-        math.floor(screenPosition.Y)
+    const [didNudge, nudgeMessage] = applyClickNudge()
+    if (!didNudge) {
+        return [false, `${context.phase} ${context.coordinate} failed (${nudgeMessage})`, undefined]
+    }
+
+    const [isExactAfterNudge, dxAfterNudge, dyAfterNudge] = ensureExactCursorAtTarget(
+        targetX,
+        targetY
     )
+    if (!isExactAfterNudge) {
+        return [
+            false,
+            `${context.phase} ${context.coordinate} failed (not exact after nudge: dx=${dxAfterNudge}, dy=${dyAfterNudge})`,
+            undefined,
+        ]
+    }
+
+    task.wait(mouseClickDelaySeconds)
+    mouse1click()
+
+    const clickedPoint = getCurrentCursorPosition()
     return [
         true,
-        `${context.button} clicked ${context.phase} ${context.coordinate} @ screen(${math.floor(screenPosition.X)},${math.floor(screenPosition.Y)}) (${pointMessage})`,
+        `${context.button} clicked ${context.phase} ${context.coordinate} @ screen(${clickedPoint.X},${clickedPoint.Y}) world(${math.round(resolvedPoint.world.X * 100) / 100},${math.round(resolvedPoint.world.Y * 100) / 100},${math.round(resolvedPoint.world.Z * 100) / 100}) (${pointMessage})`,
         clickedPoint,
     ]
 }
@@ -912,7 +968,7 @@ const executeMouseApi = (
     _board: Board,
     targets?: AutoPlayTargets
 ): [boolean, string] => {
-    if (!ensure_executor_functions_access(mousemoveabs, mousemoverel, mouse1click)) {
+    if (!ensure_executor_functions_access(mousemoverel, mousemoveabs, mouse1click)) {
         return [false, "mouse API is not supported by current executor"]
     }
 
@@ -928,17 +984,45 @@ const executeMouseApi = (
         return [false, contextMessage]
     }
 
-    const [didClickFrom, fromClickMessage, fromClickedPoint] =
-        clickContextViaMouseApi(clickContext.source)
+    const [sourcePoint, sourcePointMessage] = resolveTopVisibleScreenPoint(
+        clickContext.source
+    )
+    if (!sourcePoint) {
+        return [
+            false,
+            `${clickContext.source.phase} ${clickContext.source.coordinate} failed (${sourcePointMessage})`,
+        ]
+    }
+
+    const [destinationPoint, destinationPointMessage] = resolveTopVisibleScreenPoint(
+        clickContext.destination
+    )
+    if (!destinationPoint) {
+        return [
+            false,
+            `${clickContext.destination.phase} ${clickContext.destination.coordinate} failed (${destinationPointMessage})`,
+        ]
+    }
+
+    // Always materialize both debug points first, so the two calculated targets are visible.
+    createDebugPointMarker(sourcePoint.world, "source")
+    createDebugPointMarker(destinationPoint.world, "destination")
+
+    const [didClickFrom, fromClickMessage] = clickSourceContext(
+        clickContext.source,
+        sourcePoint,
+        sourcePointMessage
+    )
     if (!didClickFrom) {
         return [false, fromClickMessage]
     }
 
     task.wait(mouseStepDelaySeconds)
 
-    const [didClickTo, toClickMessage] = clickContextViaMouseApi(
+    const [didClickTo, toClickMessage] = clickDestinationContext(
         clickContext.destination,
-        fromClickedPoint
+        destinationPoint,
+        destinationPointMessage
     )
     if (!didClickTo) {
         return [false, toClickMessage]
@@ -986,11 +1070,7 @@ const api: RemoteAutoplayApi = {
     },
 
     supportsMouseApi: (): boolean => {
-        return ensure_executor_functions_access(
-            mousemoveabs,
-            mousemoverel,
-            mouse1click
-        )
+        return ensure_executor_functions_access(mousemoverel, mousemoveabs, mouse1click)
     },
 
     setMouseStepDelaySeconds: (seconds: number) => {
@@ -998,7 +1078,7 @@ const api: RemoteAutoplayApi = {
             return
         }
 
-        mouseStepDelaySeconds = math.clamp(seconds, 0.01, 5)
+        mouseStepDelaySeconds = math.clamp(seconds, 0, 5)
     },
 
     setMouseClickDelaySeconds: (seconds: number) => {
@@ -1006,7 +1086,7 @@ const api: RemoteAutoplayApi = {
             return
         }
 
-        mouseClickDelaySeconds = math.clamp(seconds, 0.01, 5)
+        mouseClickDelaySeconds = math.clamp(seconds, 0, 5)
     },
 
     execute: (
