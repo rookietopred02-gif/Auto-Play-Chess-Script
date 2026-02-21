@@ -47,6 +47,8 @@ let hasStartedListener = false
 let mouseStepDelaySeconds = 0
 let mouseClickDelaySeconds = 0
 let mouseAbsCoordMode: "screen" | "viewport" | undefined
+let debugPointStorage: Folder | undefined
+const ABS_MOVE_TOLERANCE_PX = 4
 
 const getConnectionsFolder = (): Folder | undefined => {
     const connections = ReplicatedStorage.FindFirstChild("Connections")
@@ -275,18 +277,24 @@ const addPartSamplePoints = (points: Vector3[], part: BasePart): void => {
     const yOffset = math.max(half.Y * 0.9, 0.05)
     const zOffset = math.max(half.Z * 0.4, 0.05)
 
-    const offsets = [
-        new Vector3(0, yOffset, 0),
-        new Vector3(0, 0, 0),
-        new Vector3(xOffset, yOffset * 0.75, 0),
-        new Vector3(-xOffset, yOffset * 0.75, 0),
-        new Vector3(0, yOffset * 0.75, zOffset),
-        new Vector3(0, yOffset * 0.75, -zOffset),
-    ]
-
-    for (const offset of offsets) {
-        addUniquePoint(points, worldPointFromOffset(part.CFrame, offset))
-    }
+    addUniquePoint(points, worldPointFromOffset(part.CFrame, new Vector3(0, yOffset, 0)))
+    addUniquePoint(points, worldPointFromOffset(part.CFrame, new Vector3(0, 0, 0)))
+    addUniquePoint(
+        points,
+        worldPointFromOffset(part.CFrame, new Vector3(xOffset, yOffset * 0.75, 0))
+    )
+    addUniquePoint(
+        points,
+        worldPointFromOffset(part.CFrame, new Vector3(-xOffset, yOffset * 0.75, 0))
+    )
+    addUniquePoint(
+        points,
+        worldPointFromOffset(part.CFrame, new Vector3(0, yOffset * 0.75, zOffset))
+    )
+    addUniquePoint(
+        points,
+        worldPointFromOffset(part.CFrame, new Vector3(0, yOffset * 0.75, -zOffset))
+    )
 }
 
 const resolveTileBasePart = (tile: Instance): BasePart | undefined => {
@@ -338,14 +346,20 @@ const isAllowedTopHit = (hit: Instance, allowed: Instance[]): boolean => {
 }
 
 const getDebugPointStorage = (): Folder => {
+    if (debugPointStorage && debugPointStorage.Parent === Workspace) {
+        return debugPointStorage
+    }
+
     const existing = Workspace.FindFirstChild("AutoPlayDebugPoints")
     if (existing && existing.IsA("Folder")) {
+        debugPointStorage = existing
         return existing
     }
 
     const folder = new Instance("Folder")
     folder.Name = "AutoPlayDebugPoints"
     folder.Parent = Workspace
+    debugPointStorage = folder
     return folder
 }
 
@@ -415,9 +429,9 @@ const createDebugPointMarker = (
     Debris.AddItem(marker, DEBUG_POINT_MARKER_LIFETIME_SECONDS)
 }
 
-const generateTileTopSamples = (part: BasePart, density: "high"): Vector3[] => {
+const generateTileTopSamples = (part: BasePart): Vector3[] => {
     const points: Array<{ point: Vector3; distanceToCenter: number }> = []
-    const gridSize = density === "high" ? TILE_SAMPLE_GRID_HIGH : TILE_SAMPLE_GRID_HIGH
+    const gridSize = TILE_SAMPLE_GRID_HIGH
     const normalizedRange = 1 - TILE_SAMPLE_MARGIN * 2
     const topOffsetY = part.Size.Y * 0.5 + TILE_SAMPLE_HEIGHT_OFFSET
 
@@ -475,18 +489,24 @@ const addBoundingBoxSamplePoints = (
     const yOffset = math.max(half.Y * 0.95, 0.05)
     const zOffset = math.max(half.Z * 0.45, 0.05)
 
-    const offsets = [
-        new Vector3(0, yOffset, 0),
-        new Vector3(0, 0, 0),
-        new Vector3(xOffset, yOffset * 0.7, zOffset),
-        new Vector3(-xOffset, yOffset * 0.7, zOffset),
-        new Vector3(xOffset, yOffset * 0.7, -zOffset),
-        new Vector3(-xOffset, yOffset * 0.7, -zOffset),
-    ]
-
-    for (const offset of offsets) {
-        addUniquePoint(points, worldPointFromOffset(boxCFrame, offset))
-    }
+    addUniquePoint(points, worldPointFromOffset(boxCFrame, new Vector3(0, yOffset, 0)))
+    addUniquePoint(points, worldPointFromOffset(boxCFrame, new Vector3(0, 0, 0)))
+    addUniquePoint(
+        points,
+        worldPointFromOffset(boxCFrame, new Vector3(xOffset, yOffset * 0.7, zOffset))
+    )
+    addUniquePoint(
+        points,
+        worldPointFromOffset(boxCFrame, new Vector3(-xOffset, yOffset * 0.7, zOffset))
+    )
+    addUniquePoint(
+        points,
+        worldPointFromOffset(boxCFrame, new Vector3(xOffset, yOffset * 0.7, -zOffset))
+    )
+    addUniquePoint(
+        points,
+        worldPointFromOffset(boxCFrame, new Vector3(-xOffset, yOffset * 0.7, -zOffset))
+    )
 }
 
 const generatePieceSurfaceSamples = (target: Instance): Vector3[] => {
@@ -660,7 +680,7 @@ const resolveTopVisibleScreenPoint = (
 
     const raycastParams = buildClickRaycastParams()
     const tileStage = `${context.phase} ${context.coordinate} tile-sampling`
-    const tileSamples = generateTileTopSamples(context.tilePart, "high")
+    const tileSamples = generateTileTopSamples(context.tilePart)
     const [tileScreenPoint, tileReason] = resolveTopVisiblePointFromSamples(
         camera,
         tileSamples,
@@ -840,7 +860,7 @@ const moveAbsoluteToTarget = (
     ): [
         boolean,
         string,
-        | {
+            | {
               dx: number
               dy: number
               cursor: Vector2
@@ -875,89 +895,98 @@ const moveAbsoluteToTarget = (
         ]
     }
 
-    if (mouseAbsCoordMode === undefined) {
-        const [okScreen, msgScreen, stateScreen, modeScreen] = tryMode("screen")
-        const [okViewport, msgViewport, stateViewport, modeViewport] =
-            tryMode("viewport")
-
-        if (okScreen && okViewport && stateScreen && stateViewport && modeScreen) {
-            if (stateViewport.score < stateScreen.score && modeViewport) {
-                mouseAbsCoordMode = modeViewport
-                return [
-                    true,
-                    msgViewport,
-                    stateViewport.dx,
-                    stateViewport.dy,
-                    stateViewport.cursor,
-                ]
+    const pickBetterState = (
+        screenState?:
+            | {
+                  dx: number
+                  dy: number
+                  cursor: Vector2
+                  score: number
+              }
+            | undefined,
+        viewportState?:
+            | {
+                  dx: number
+                  dy: number
+                  cursor: Vector2
+                  score: number
+              }
+            | undefined
+    ):
+        | {
+              mode: "screen" | "viewport"
+              state: {
+                  dx: number
+                  dy: number
+                  cursor: Vector2
+                  score: number
+              }
+          }
+        | undefined => {
+        if (screenState && viewportState) {
+            if (viewportState.score < screenState.score) {
+                return { mode: "viewport", state: viewportState }
             }
-
-            mouseAbsCoordMode = modeScreen
-            const [okScreen2, msgScreen2, stateScreen2] = tryMode(modeScreen)
-            if (okScreen2 && stateScreen2) {
-                return [
-                    true,
-                    msgScreen2,
-                    stateScreen2.dx,
-                    stateScreen2.dy,
-                    stateScreen2.cursor,
-                ]
-            }
-
-            return [
-                true,
-                msgScreen,
-                stateScreen.dx,
-                stateScreen.dy,
-                stateScreen.cursor,
-            ]
+            return { mode: "screen", state: screenState }
         }
 
-        if (okScreen && stateScreen && modeScreen) {
-            mouseAbsCoordMode = modeScreen
-            return [
-                true,
-                msgScreen,
-                stateScreen.dx,
-                stateScreen.dy,
-                stateScreen.cursor,
-            ]
+        if (screenState) {
+            return { mode: "screen", state: screenState }
         }
 
-        if (okViewport && stateViewport && modeViewport) {
-            mouseAbsCoordMode = modeViewport
-            return [
-                true,
-                msgViewport,
-                stateViewport.dx,
-                stateViewport.dy,
-                stateViewport.cursor,
-            ]
+        if (viewportState) {
+            return { mode: "viewport", state: viewportState }
         }
 
+        return undefined
+    }
+
+    // Always validate absolute movement quality each call.
+    // This prevents a bad first calibration from locking offset for the whole match.
+    const preferredMode = mouseAbsCoordMode ?? "screen"
+    const secondaryMode: "screen" | "viewport" =
+        preferredMode === "screen" ? "viewport" : "screen"
+
+    const [okPreferred, msgPreferred, statePreferred] = tryMode(preferredMode)
+    if (
+        okPreferred &&
+        statePreferred &&
+        statePreferred.score <= ABS_MOVE_TOLERANCE_PX
+    ) {
+        mouseAbsCoordMode = preferredMode
+        return [
+            true,
+            `${msgPreferred} tol<=${ABS_MOVE_TOLERANCE_PX}`,
+            statePreferred.dx,
+            statePreferred.dy,
+            statePreferred.cursor,
+        ]
+    }
+
+    const [okSecondary, msgSecondary, stateSecondary] = tryMode(secondaryMode)
+
+    const best = pickBetterState(
+        okPreferred ? statePreferred : undefined,
+        okSecondary ? stateSecondary : undefined
+    )
+    if (!best) {
         return [
             false,
-            `abs move failed in both modes (screen: ${msgScreen}; viewport: ${msgViewport})`,
+            `abs move failed (${preferredMode}: ${msgPreferred}; ${secondaryMode}: ${msgSecondary})`,
             0,
             0,
             cursorAfterMove,
         ]
     }
 
-    const [ok, msg, state] = tryMode(mouseAbsCoordMode)
-    if (ok && state) {
-        return [true, msg, state.dx, state.dy, state.cursor]
-    }
-
-    const otherMode: "screen" | "viewport" =
-        mouseAbsCoordMode === "screen" ? "viewport" : "screen"
-    const [okOther, msgOther, otherState] = tryMode(otherMode)
-    if (okOther && otherState) {
-        mouseAbsCoordMode = otherMode
-        return [true, msgOther, otherState.dx, otherState.dy, otherState.cursor]
-    }
-
-    return [false, `abs move failed (${msg}; ${msgOther})`, 0, 0, cursorAfterMove]
+    mouseAbsCoordMode = best.mode
+    return [
+        true,
+        `${best.mode === preferredMode ? msgPreferred : msgSecondary} (recalibrated mode=${best.mode}; tol=${ABS_MOVE_TOLERANCE_PX}; score=${best.state.score})`,
+        best.state.dx,
+        best.state.dy,
+        best.state.cursor,
+    ]
 }
 
 const applyClickNudge = (): [boolean, string] => {
@@ -997,6 +1026,9 @@ const clickContextCommon = (
         return [false, `${context.phase} ${context.coordinate} failed (${moveMessage2})`, undefined]
     }
     task.wait()
+    if (mouseClickDelaySeconds > 0) {
+        task.wait(mouseClickDelaySeconds)
+    }
     mouse1click()
 
     const clickedPoint = getCurrentCursorPosition()
