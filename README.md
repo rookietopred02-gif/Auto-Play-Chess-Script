@@ -60,7 +60,7 @@ Example:
 ```lua
 _G.__CHESS_SOLVER_URL = "http://127.0.0.1:3000"
 _G.__CHESS_SOLVER_RETRIES = 2
-loadstring(game:HttpGet("https://github.com/rookietopred02-gif/Auto-Play-Chess-Script/releases/latest/download/main.lua?v=20260221-4"))()
+loadstring(game:HttpGet("https://raw.githubusercontent.com/rookietopred02-gif/Auto-Play-Chess-Script/refs/heads/main/main.lua"))()
 ```
 
 ## Notes
