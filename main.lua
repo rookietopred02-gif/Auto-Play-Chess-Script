@@ -7131,6 +7131,28 @@ local window = Rayfield:CreateWindow({
 	},
 })
 local board = Board.new()
+local runtimeState = { alive = true }
+local runtimeId = `{tostring(os.clock())}-{tostring(math.random(100000, 999999))}`
+do
+	local globalEnv = if getgenv then getgenv() else nil
+	if globalEnv then
+		local previousRuntime = globalEnv.__CHESS_AUTOPLAY_RUNTIME
+		if type(previousRuntime) == "table" and type(previousRuntime.stop) == "function" then
+			pcall(function()
+				previousRuntime.stop("replaced_by_new_runtime")
+			end)
+		end
+		globalEnv.__CHESS_AUTOPLAY_RUNTIME = {
+			id = runtimeId,
+			stop = function(_reason)
+				runtimeState.alive = false
+				pcall(function()
+					Highlighter:destroyAll()
+				end)
+			end,
+		}
+	end
+end
 local _binding = remoteAutoplay.startMatchIdListener()
 local listenerReady = _binding[1]
 local listenerMessage = _binding[2]
@@ -7143,8 +7165,11 @@ local getCurrentMatchIdText = function()
 	end
 	return `Current Match ID: {currentMatchId}`
 end
-local setBotStatus, setBotOutputContent, thinkTimeSlider, depthSlider, disregardTimeToggle, autoPlayToggle, matchIdLabel
+local setBotStatus, setBotOutputContent, thinkTimeSlider, depthSlider, disregardTimeToggle, autoPlayToggle, matchIdLabel, unloadScript
 local function bestMove()
+	if not runtimeState.alive then
+		return false
+	end
 	if isCalculating then
 		return false
 	end
@@ -7176,9 +7201,16 @@ local function bestMove()
 		isCalculating = false
 		return false
 	end
-	Highlighter.new(output[3])
-	Highlighter.new(output[4])
+	if output[3] then
+		Highlighter.new(output[3])
+	end
+	if output[4] then
+		Highlighter.new(output[4])
+	end
 	local botMessage = `Received: {output[2]}`
+	if not output[3] or not output[4] then
+		botMessage = `{botMessage} | target resolve fallback`
+	end
 	if autoPlayToggle.CurrentValue then
 		local _binding_1 = remoteAutoplay.execute(output[2], board, autoPlayMethod, {
 			fromTarget = output[3],
@@ -7212,7 +7244,7 @@ if not ensure_executor_functions_access(queue_on_teleport) then
 		Content = `Do not worry that is OKAY but you will have to manually re-execute the script on rejoin.`,
 	})
 else
-	queue_on_teleport(`loadstring(game:HttpGet("https://raw.githubusercontent.com/rookietopred02-gif/Auto-Play-Chess-Script/refs/heads/main/main.lua"))()`)
+	queue_on_teleport(`loadstring(game:HttpGet("https://raw.githubusercontent.com/rookietopred02-gif/Auto-Play-Chess-Script/refs/heads/main/main.lua?v=20260221-5"))()`)
 end
 mainTab:CreateSection("Status")
 local botStatus = ""
@@ -7249,10 +7281,44 @@ setBotOutputContent = function(content)
 		Content = content,
 	})
 end
+unloadScript = function(reason)
+	if not runtimeState.alive then
+		return nil
+	end
+	runtimeState.alive = false
+	isCalculating = false
+	pcall(function()
+		Highlighter:destroyAll()
+	end)
+	local globalEnv = if getgenv then getgenv() else nil
+	if globalEnv and type(globalEnv.__CHESS_AUTOPLAY_RUNTIME) == "table" then
+		local activeRuntime = globalEnv.__CHESS_AUTOPLAY_RUNTIME
+		if activeRuntime.id == runtimeId then
+			globalEnv.__CHESS_AUTOPLAY_RUNTIME = nil
+		end
+	end
+	setBotStatus("Unloaded")
+	setBotOutputContent(`Script unloaded ({reason or "manual"})`)
+	pcall(function()
+		if window and type(window.Destroy) == "function" then
+			window:Destroy()
+			return nil
+		end
+		if Rayfield and type(Rayfield.Destroy) == "function" then
+			Rayfield:Destroy()
+		end
+	end)
+end
 mainTab:CreateSection("Run")
 mainTab:CreateButton({
 	Name = "Run",
 	Callback = bestMove,
+})
+mainTab:CreateButton({
+	Name = "Unload Script",
+	Callback = function()
+		unloadScript("button")
+	end,
 })
 local autoCalculateToggle = mainTab:CreateToggle({
 	Name = "Auto Calculate",
@@ -7310,7 +7376,7 @@ local mouseClickDelaySlider = mainTab:CreateSlider({
 remoteAutoplay.setMouseClickDelaySeconds(mouseClickDelaySlider.CurrentValue)
 task.spawn(function()
 	-- Execute once per turn while auto-calculate is enabled.
-	while true do
+	while runtimeState.alive do
 		matchIdLabel:Set(getCurrentMatchIdText())
 		if autoCalculateToggle.CurrentValue and not isCalculating and Board.gameInProgress() and board:isPlayerTurn() then
 			bestMove()
@@ -7464,7 +7530,7 @@ return function(board, depth, maxThinkTime, disregardThinkTime, options)
 	local x1, y1, x2, y2 = getPosFromResult(move)
 	local pieceToMove = Board.getPiece(tostring(tostring(x1) .. "," .. tostring(y1)))
 	if not pieceToMove then
-		return { false, "no piece to move" }
+		warn(`findBestMove: server returned move "{move}" but source piece instance not resolved`)
 	end
 	local _placeToMove = Workspace:FindFirstChild("Board")
 	if _placeToMove ~= nil then
@@ -7472,7 +7538,7 @@ return function(board, depth, maxThinkTime, disregardThinkTime, options)
 	end
 	local placeToMove = _placeToMove
 	if not placeToMove then
-		return { false, "no place to move to" }
+		warn(`findBestMove: server returned move "{move}" but destination tile instance not resolved`)
 	end
 	return { true, move, pieceToMove, placeToMove }
 end
@@ -7962,10 +8028,14 @@ local CLICK_RAY_DISTANCE = 2048
 local TILE_SAMPLE_GRID_HIGH = 11
 local TILE_SAMPLE_MARGIN = 0.08
 local TILE_SAMPLE_HEIGHT_OFFSET = 0.08
+local SCREEN_PIXEL_SEARCH_RADIUS = 6
+local SCREEN_PIXEL_STABILITY_RADIUS = 1
 local DEBUG_POINT_MARKER_SIZE = 0.1
 local DEBUG_POINT_MARKER_LIFETIME_SECONDS = 6
 local DEBUG_POINT_MARKER_WORLD_OFFSET_Y = 0
 local DEBUG_POINT_MARKER_PIXEL_SIZE = 18
+local CLICK_TARGET_OFFSET_X = 5.7
+local CLICK_TARGET_OFFSET_Y = 7.7
 local addUniquePoint = function(points, point)
 	if not point then
 		return nil
@@ -8198,6 +8268,73 @@ local buildClickRaycastParams = function()
 	raycastParams.FilterDescendantsInstances = ignoreList
 	return raycastParams
 end
+local raycastTopHitAtScreen = function(camera, screenX, screenY, raycastParams)
+	local ray = camera:ScreenPointToRay(screenX, screenY)
+	return Workspace:Raycast(ray.Origin, ray.Direction * CLICK_RAY_DISTANCE, raycastParams)
+end
+local scoreStableNeighborhood = function(camera, screenX, screenY, allowedHits, raycastParams)
+	local stableHits = 0
+	for offsetX = -SCREEN_PIXEL_STABILITY_RADIUS, SCREEN_PIXEL_STABILITY_RADIUS do
+		for offsetY = -SCREEN_PIXEL_STABILITY_RADIUS, SCREEN_PIXEL_STABILITY_RADIUS do
+			local hit = raycastTopHitAtScreen(camera, screenX + offsetX, screenY + offsetY, raycastParams)
+			if hit and hit.Instance and isAllowedTopHit(hit.Instance, allowedHits) then
+				stableHits += 1
+			end
+		end
+	end
+	return stableHits
+end
+local refineTopHitPointToStablePixel = function(camera, anchorPoint, allowedHits, raycastParams)
+	local anchorX = math.round(anchorPoint.screen.X)
+	local anchorY = math.round(anchorPoint.screen.Y)
+	local bestPoint = nil
+	local bestRadius = math.huge
+	local bestDistanceSq = math.huge
+	local bestStability = -1
+	for radius = 0, SCREEN_PIXEL_SEARCH_RADIUS do
+		for dx = -radius, radius do
+			for dy = -radius, radius do
+				if math.max(math.abs(dx), math.abs(dy)) ~= radius then
+					continue
+				end
+				local sampleX = anchorX + dx
+				local sampleY = anchorY + dy
+				local hit = raycastTopHitAtScreen(camera, sampleX, sampleY, raycastParams)
+				if not hit or not hit.Instance then
+					continue
+				end
+				if not isAllowedTopHit(hit.Instance, allowedHits) then
+					continue
+				end
+				local distanceSq = dx * dx + dy * dy
+				local stability = scoreStableNeighborhood(camera, sampleX, sampleY, allowedHits, raycastParams)
+				local shouldReplace = false
+				if radius < bestRadius then
+					shouldReplace = true
+				elseif radius == bestRadius then
+					if stability > bestStability then
+						shouldReplace = true
+					elseif stability == bestStability and distanceSq < bestDistanceSq then
+						shouldReplace = true
+					end
+				end
+				if shouldReplace then
+					bestRadius = radius
+					bestDistanceSq = distanceSq
+					bestStability = stability
+					bestPoint = {
+						screen = Vector3.new(sampleX, sampleY, anchorPoint.screen.Z),
+						world = hit.Position,
+					}
+				end
+			end
+		end
+		if bestPoint then
+			break
+		end
+	end
+	return bestPoint
+end
 local pickInteriorSampleHitPoint = function(points)
 	if #points == 1 then
 		return points[1]
@@ -8237,8 +8374,7 @@ local resolveTopVisiblePointFromSamples = function(camera, worldPoints, allowedH
 			continue
 		end
 		visibleSampleCount += 1
-		local ray = camera:ScreenPointToRay(screenPoint.X, screenPoint.Y)
-		local hit = Workspace:Raycast(ray.Origin, ray.Direction * CLICK_RAY_DISTANCE, raycastParams)
+		local hit = raycastTopHitAtScreen(camera, screenPoint.X, screenPoint.Y, raycastParams)
 		if not hit or not hit.Instance then
 			continue
 		end
@@ -8256,6 +8392,10 @@ local resolveTopVisiblePointFromSamples = function(camera, worldPoints, allowedH
 	end
 	if #topHitPoints > 0 then
 		local interiorPoint = pickInteriorSampleHitPoint(topHitPoints)
+		local refinedPoint = refineTopHitPointToStablePixel(camera, interiorPoint, allowedHits, raycastParams)
+		if refinedPoint then
+			return { refinedPoint, `{stageName}: {#topHitPoints} visible top-hit points (pixel-refined)` }
+		end
 		return { interiorPoint, `{stageName}: {#topHitPoints} visible top-hit points` }
 	end
 	if visibleSampleCount == 0 then
@@ -8371,28 +8511,25 @@ local getCurrentCursorPosition = function()
 	return Vector2.new(math.round(cursor.X), math.round(cursor.Y))
 end
 local resolveMoveTargetFromCalculatedPoint = function(resolvedPoint)
-	local fallbackX = math.round(resolvedPoint.screen.X)
-	local fallbackY = math.round(resolvedPoint.screen.Y)
+	local preciseX = math.round(resolvedPoint.screen.X + CLICK_TARGET_OFFSET_X)
+	local preciseY = math.round(resolvedPoint.screen.Y + CLICK_TARGET_OFFSET_Y)
+	local target = {
+		screenX = preciseX,
+		screenY = preciseY,
+		viewportX = preciseX,
+		viewportY = preciseY,
+	}
 	local camera = Workspace.CurrentCamera
-	if camera then
+	if camera and resolvedPoint.world then
 		local markerWorldPoint = resolvedPoint.world
-		local markerScreenPoint, screenVisible = camera:WorldToScreenPoint(markerWorldPoint)
 		local markerViewportPoint, viewportVisible = camera:WorldToViewportPoint(markerWorldPoint)
-		if screenVisible or viewportVisible then
-			return { {
-				screenX = math.round(markerScreenPoint.X),
-				screenY = math.round(markerScreenPoint.Y),
-				viewportX = math.round(markerViewportPoint.X),
-				viewportY = math.round(markerViewportPoint.Y),
-			}, "marker-projected" }
+		if viewportVisible then
+			target.viewportX = math.round(markerViewportPoint.X + CLICK_TARGET_OFFSET_X)
+			target.viewportY = math.round(markerViewportPoint.Y + CLICK_TARGET_OFFSET_Y)
 		end
+		return { target, "resolved-screen-primary" }
 	end
-	return { {
-		screenX = fallbackX,
-		screenY = fallbackY,
-		viewportX = fallbackX,
-		viewportY = fallbackY,
-	}, "resolved-screen-fallback" }
+	return { target, "resolved-screen-primary" }
 end
 local moveAbsoluteToTarget = function(target)
 	local cursorAfterMove = getCurrentCursorPosition()
@@ -8518,6 +8655,65 @@ local clickContextCommon = function(context, resolvedPoint, pointMessage)
 end
 local clickSourceContext = clickContextCommon
 local clickDestinationContext = clickContextCommon
+local MOUSE_AUTOPLAY_VERIFY_TIMEOUT_SECONDS = 1.8
+local MOUSE_AUTOPLAY_VERIFY_INTERVAL_SECONDS = 0.05
+local MOUSE_AUTOPLAY_MAX_ATTEMPTS = 2
+local getBoardPieceObjectAt = function(board, x, y)
+	if not board or type(board.getPieceDataAt) ~= "function" then
+		return nil
+	end
+	local success, pieceData = pcall(function()
+		return board:getPieceDataAt(x, y)
+	end)
+	if not success or not pieceData then
+		return nil
+	end
+	if type(pieceData) == "table" then
+		if pieceData.object ~= nil then
+			return pieceData.object
+		end
+		if pieceData.instance ~= nil then
+			return pieceData.instance
+		end
+	end
+	return pieceData
+end
+local didMouseAutoplayApplyMove = function(board, fromX, fromY, toX, toY, beforeSourceObject, beforeDestinationObject)
+	local afterSourceObject = getBoardPieceObjectAt(board, fromX, fromY)
+	local afterDestinationObject = getBoardPieceObjectAt(board, toX, toY)
+	if beforeSourceObject and afterDestinationObject == beforeSourceObject then
+		return true
+	end
+	if beforeSourceObject and afterSourceObject ~= beforeSourceObject and afterDestinationObject then
+		return true
+	end
+	if beforeDestinationObject and afterDestinationObject and afterDestinationObject ~= beforeDestinationObject then
+		return true
+	end
+	if (afterSourceObject == nil or afterSourceObject ~= beforeSourceObject) and afterDestinationObject ~= nil then
+		return true
+	end
+	local turnCheckOk, isPlayerTurn = pcall(function()
+		return board:isPlayerTurn()
+	end)
+	if turnCheckOk and not isPlayerTurn then
+		return true
+	end
+	return false
+end
+local waitForMouseAutoplayApply = function(board, fromX, fromY, toX, toY, beforeSourceObject, beforeDestinationObject)
+	if didMouseAutoplayApplyMove(board, fromX, fromY, toX, toY, beforeSourceObject, beforeDestinationObject) then
+		return true
+	end
+	local deadline = os.clock() + MOUSE_AUTOPLAY_VERIFY_TIMEOUT_SECONDS
+	while os.clock() < deadline do
+		task.wait(MOUSE_AUTOPLAY_VERIFY_INTERVAL_SECONDS)
+		if didMouseAutoplayApplyMove(board, fromX, fromY, toX, toY, beforeSourceObject, beforeDestinationObject) then
+			return true
+		end
+	end
+	return didMouseAutoplayApplyMove(board, fromX, fromY, toX, toY, beforeSourceObject, beforeDestinationObject)
+end
 local executeRemoteEvent = function(move, board)
 	local movePieceEvent = getMovePieceEvent()
 	if not movePieceEvent then
@@ -8547,46 +8743,59 @@ local executeRemoteEvent = function(move, board)
 	end
 	return { true, `remote sent: id={matchId}, move={move}` }
 end
-local executeMouseApi = function(move, _board, targets)
+local executeMouseApi = function(move, board, targets)
 	if not ensure_executor_functions_access(mousemoverel, mousemoveabs, mouse1click) then
 		return { false, "mouse API is not supported by current executor" }
 	end
 	local fromX, fromY, toX, toY = getPosFromResult(move)
-	local _binding = buildClickContext(fromX, fromY, toX, toY, targets)
-	local clickContext = _binding[1]
-	local contextMessage = _binding[2]
-	if not clickContext then
-		return { false, contextMessage }
+	local beforeSourceObject = getBoardPieceObjectAt(board, fromX, fromY)
+	local beforeDestinationObject = getBoardPieceObjectAt(board, toX, toY)
+	local lastAttemptMessage = "unknown mouse failure"
+	for attempt = 1, MOUSE_AUTOPLAY_MAX_ATTEMPTS do
+		local _binding = buildClickContext(fromX, fromY, toX, toY, targets)
+		local clickContext = _binding[1]
+		local contextMessage = _binding[2]
+		if not clickContext then
+			return { false, contextMessage }
+		end
+		local _binding_1 = resolveTopVisibleScreenPoint(clickContext.source)
+		local sourcePoint = _binding_1[1]
+		local sourcePointMessage = _binding_1[2]
+		if not sourcePoint then
+			return { false, `{clickContext.source.phase} {clickContext.source.coordinate} failed ({sourcePointMessage})` }
+		end
+		local _binding_2 = resolveTopVisibleScreenPoint(clickContext.destination)
+		local destinationPoint = _binding_2[1]
+		local destinationPointMessage = _binding_2[2]
+		if not destinationPoint then
+			return { false, `{clickContext.destination.phase} {clickContext.destination.coordinate} failed ({destinationPointMessage})` }
+		end
+		-- Always materialize both debug points first, so the two calculated targets are visible.
+		createDebugPointMarker(sourcePoint.world, "source")
+		createDebugPointMarker(destinationPoint.world, "destination")
+		local _binding_3 = clickSourceContext(clickContext.source, sourcePoint, sourcePointMessage)
+		local didClickFrom = _binding_3[1]
+		local fromClickMessage = _binding_3[2]
+		if not didClickFrom then
+			return { false, fromClickMessage }
+		end
+		task.wait(math.max(mouseStepDelaySeconds, 0.1))
+		local _binding_4 = clickDestinationContext(clickContext.destination, destinationPoint, destinationPointMessage)
+		local didClickTo = _binding_4[1]
+		local toClickMessage = _binding_4[2]
+		if not didClickTo then
+			return { false, toClickMessage }
+		end
+		local verified = waitForMouseAutoplayApply(board, fromX, fromY, toX, toY, beforeSourceObject, beforeDestinationObject)
+		if verified then
+			return { true, `mouse move sent: {move} ({fromClickMessage}; {toClickMessage}; verified=ok; attempt={attempt})` }
+		end
+		lastAttemptMessage = `{fromClickMessage}; {toClickMessage}; verified=failed; attempt={attempt}`
+		if attempt < MOUSE_AUTOPLAY_MAX_ATTEMPTS then
+			task.wait(math.max(mouseStepDelaySeconds, 0.1))
+		end
 	end
-	local _binding_1 = resolveTopVisibleScreenPoint(clickContext.source)
-	local sourcePoint = _binding_1[1]
-	local sourcePointMessage = _binding_1[2]
-	if not sourcePoint then
-		return { false, `{clickContext.source.phase} {clickContext.source.coordinate} failed ({sourcePointMessage})` }
-	end
-	local _binding_2 = resolveTopVisibleScreenPoint(clickContext.destination)
-	local destinationPoint = _binding_2[1]
-	local destinationPointMessage = _binding_2[2]
-	if not destinationPoint then
-		return { false, `{clickContext.destination.phase} {clickContext.destination.coordinate} failed ({destinationPointMessage})` }
-	end
-	-- Always materialize both debug points first, so the two calculated targets are visible.
-	createDebugPointMarker(sourcePoint.world, "source")
-	createDebugPointMarker(destinationPoint.world, "destination")
-	local _binding_3 = clickSourceContext(clickContext.source, sourcePoint, sourcePointMessage)
-	local didClickFrom = _binding_3[1]
-	local fromClickMessage = _binding_3[2]
-	if not didClickFrom then
-		return { false, fromClickMessage }
-	end
-	task.wait(math.max(mouseStepDelaySeconds, 0.1))
-	local _binding_4 = clickDestinationContext(clickContext.destination, destinationPoint, destinationPointMessage)
-	local didClickTo = _binding_4[1]
-	local toClickMessage = _binding_4[2]
-	if not didClickTo then
-		return { false, toClickMessage }
-	end
-	return { true, `mouse move sent: {move} ({fromClickMessage}; {toClickMessage})` }
+	return { false, `mouse move verification failed: {move} ({lastAttemptMessage})` }
 end
 local api = {
 	startMatchIdListener = function()
@@ -9366,5 +9575,3 @@ end
 for _, ScriptRef in next, ScriptsToRun do
     Defer(LoadScript, ScriptRef)
 end
-
-
