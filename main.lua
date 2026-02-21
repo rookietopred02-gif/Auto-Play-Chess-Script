@@ -7244,7 +7244,7 @@ if not ensure_executor_functions_access(queue_on_teleport) then
 		Content = `Do not worry that is OKAY but you will have to manually re-execute the script on rejoin.`,
 	})
 else
-	queue_on_teleport(`loadstring(game:HttpGet("https://raw.githubusercontent.com/rookietopred02-gif/Auto-Play-Chess-Script/refs/heads/main/main.lua"))()
+	queue_on_teleport(`loadstring(game:HttpGet("https://raw.githubusercontent.com/rookietopred02-gif/Auto-Play-Chess-Script/refs/heads/main/main.lua"))()`)
 end
 mainTab:CreateSection("Status")
 local botStatus = ""
