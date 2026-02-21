@@ -17,7 +17,7 @@ It runs a local Stockfish server and a Rayfield client script with:
 - Releases page:  
   `https://github.com/rookietopred02-gif/Auto-Play-Chess-Script/releases`
 - Main loader file (`main.lua`):  
-  `https://raw.githubusercontent.com/rookietopred02-gif/Auto-Play-Chess-Script/refs/heads/main/main.lua`
+  `https://raw.githubusercontent.com/rookietopred02-gif/Auto-Play-Chess-Script/refs/heads/main/main.lua?v=20260221-5`
 - Windows server binary (`roblox-chess-script.exe`):  
   `https://github.com/rookietopred02-gif/Auto-Play-Chess-Script/releases/latest/download/roblox-chess-script.exe`
 
@@ -29,9 +29,14 @@ It runs a local Stockfish server and a Rayfield client script with:
 3. Execute this in your executor:
 
 ```lua
-loadstring(game:HttpGet("https://raw.githubusercontent.com/rookietopred02-gif/Auto-Play-Chess-Script/refs/heads/main/main.lua"))()
+loadstring(game:HttpGet("https://raw.githubusercontent.com/rookietopred02-gif/Auto-Play-Chess-Script/refs/heads/main/main.lua?v=20260221-5"))()
 ```
 
+Original-style one-liner (same style as the original project):
+
+```lua
+loadstring(game:HttpGet("https://raw.githubusercontent.com/rookietopred02-gif/Auto-Play-Chess-Script/refs/heads/main/main.lua?v=20260221-5"))()
+```
 
 ## In-Game UI Controls (Rayfield)
 
@@ -61,7 +66,7 @@ Example:
 ```lua
 _G.__CHESS_SOLVER_URL = "http://127.0.0.1:3000"
 _G.__CHESS_SOLVER_RETRIES = 2
-loadstring(game:HttpGet("https://raw.githubusercontent.com/rookietopred02-gif/Auto-Play-Chess-Script/refs/heads/main/main.lua"))()
+loadstring(game:HttpGet("https://raw.githubusercontent.com/rookietopred02-gif/Auto-Play-Chess-Script/refs/heads/main/main.lua?v=20260221-5"))()
 ```
 
 ## Notes
@@ -73,5 +78,3 @@ loadstring(game:HttpGet("https://raw.githubusercontent.com/rookietopred02-gif/Au
 ## Disclaimer
 
 For educational purposes only. You are responsible for how you use this project.
-
-
