@@ -45,7 +45,7 @@ loadstring(game:HttpGet("https://github.com/rookietopred02-gif/Auto-Play-Chess-S
 - `Depth`: search depth.  
   Range: `10` to `100`.
 - `Think Time`: max think time per solve.  
-  Range: `0.01` to `120.00` seconds.
+  Range: `0.01` to `90.00` seconds.
 - `Disregard Think Time`: keep searching until depth target.
 
 ## Runtime Overrides
