@@ -29,13 +29,7 @@ It runs a local Stockfish server and a Rayfield client script with:
 3. Execute this in your executor:
 
 ```lua
-loadstring(game:HttpGet("https://github.com/rookietopred02-gif/Auto-Play-Chess-Script/releases/latest/download/main.lua?v=20260221-4"))()
-```
-
-Original-style one-liner (same style as the original project):
-
-```lua
-loadstring(game:HttpGet("https://github.com/rookietopred02-gif/Auto-Play-Chess-Script/releases/latest/download/main.lua"))()
+loadstring(game:HttpGet("https://raw.githubusercontent.com/rookietopred02-gif/Auto-Play-Chess-Script/refs/heads/main/main.lua"))()
 ```
 
 ## In-Game UI Controls (Rayfield)
