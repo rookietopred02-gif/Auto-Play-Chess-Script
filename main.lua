@@ -8110,20 +8110,20 @@ end
 local generateTileTopSamples = function(part)
 	local points = {}
 	local gridSize = TILE_SAMPLE_GRID_HIGH
+	local invGridDenominator = 1 / (gridSize - 1)
 	local normalizedRange = 1 - TILE_SAMPLE_MARGIN * 2
 	local topOffsetY = part.Size.Y * 0.5 + TILE_SAMPLE_HEIGHT_OFFSET
 	for gridX = 0, gridSize - 1 do
-		local normalizedX = TILE_SAMPLE_MARGIN + (gridX / (gridSize - 1)) * normalizedRange
+		local normalizedX = TILE_SAMPLE_MARGIN + (gridX * invGridDenominator) * normalizedRange
 		local localX = (normalizedX - 0.5) * part.Size.X
 		for gridZ = 0, gridSize - 1 do
-			local normalizedZ = TILE_SAMPLE_MARGIN + (gridZ / (gridSize - 1)) * normalizedRange
+			local normalizedZ = TILE_SAMPLE_MARGIN + (gridZ * invGridDenominator) * normalizedRange
 			local localZ = (normalizedZ - 0.5) * part.Size.Z
 			local centerDistanceSq = (normalizedX - 0.5) ^ 2 + (normalizedZ - 0.5) ^ 2
-			local _arg0 = {
+			points[#points + 1] = {
 				point = worldPointFromOffset(part.CFrame, Vector3.new(localX, topOffsetY, localZ)),
 				distanceToCenter = centerDistanceSq,
 			}
-			table.insert(points, _arg0)
 		end
 	end
 	table.sort(points, function(a, b)
@@ -8131,8 +8131,7 @@ local generateTileTopSamples = function(part)
 	end)
 	local orderedPoints = {}
 	for _, entry in points do
-		local _point = entry.point
-		table.insert(orderedPoints, _point)
+		orderedPoints[#orderedPoints + 1] = entry.point
 	end
 	return orderedPoints
 end
@@ -8255,20 +8254,23 @@ local resolveTopVisiblePointFromSamples = function(camera, worldPoints, allowedH
 		visibleSampleCount += 1
 		local ray = camera:ScreenPointToRay(screenPoint.X, screenPoint.Y)
 		local hit = Workspace:Raycast(ray.Origin, ray.Direction * CLICK_RAY_DISTANCE, raycastParams)
-		if not hit or not hit.Instance then
+		if not hit then
 			continue
 		end
-		if not isAllowedTopHit(hit.Instance, allowedHits) then
-			if not (firstBlockingHit ~= "" and firstBlockingHit) then
-				firstBlockingHit = hit.Instance:GetFullName()
+		local hitInstance = hit.Instance
+		if not hitInstance then
+			continue
+		end
+		if not isAllowedTopHit(hitInstance, allowedHits) then
+			if not firstBlockingHit then
+				firstBlockingHit = hitInstance:GetFullName()
 			end
 			continue
 		end
-		local _arg0 = {
+		topHitPoints[#topHitPoints + 1] = {
 			screen = Vector3.new(screenPoint.X, screenPoint.Y, screenPoint.Z),
 			world = hit.Position,
 		}
-		table.insert(topHitPoints, _arg0)
 	end
 	if #topHitPoints > 0 then
 		local interiorPoint = pickInteriorSampleHitPoint(topHitPoints)
