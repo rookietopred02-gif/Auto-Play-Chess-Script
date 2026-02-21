@@ -165,7 +165,7 @@ if (!ensure_executor_functions_access(queue_on_teleport))
     })
 else
     queue_on_teleport(
-        `loadstring(game:HttpGet("https://github.com/rookietopred02-gif/Auto-Play-Chess-Script/releases/latest/download/main.lua?v=20260221-3"))()`
+        `loadstring(game:HttpGet("https://github.com/rookietopred02-gif/Auto-Play-Chess-Script/releases/latest/download/main.lua?v=20260221-4"))()`
     )
 
 mainTab.CreateSection("Status")
@@ -328,7 +328,7 @@ const disregardTimeToggle = mainTab.CreateToggle({
 // mainTab.CreateLabel("Maximum amount of time Stockfish has to think")
 const thinkTimeSlider = mainTab.CreateSlider({
     Name: "Think Time",
-    Range: [0.01, 120],
+    Range: [0.01, 90],
     CurrentValue: 0.1,
     Flag: "MaxThinkTimeSeconds",
     Suffix: "s",

@@ -13,6 +13,8 @@ interface FindBestMoveOptions {
     retries?: number
 }
 
+let lastDesyncWarningAt = 0
+
 const getStableFen = (
     board: Board,
     attempts = 40,
@@ -43,7 +45,11 @@ export = (
 
     if (board.willCauseDesync()) {
         // Keep compatibility with previous behavior: this check is advisory only.
-        warn("board sync check reported a potential desync risk")
+        const now = os.clock()
+        if (now - lastDesyncWarningAt >= 2) {
+            warn("board sync check reported a potential desync risk")
+            lastDesyncWarningAt = now
+        }
     }
 
     const fen = getStableFen(board)

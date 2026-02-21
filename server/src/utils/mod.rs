@@ -10,11 +10,11 @@ use serde::{Deserialize, Serialize};
 
 pub const DEFAULT_DEPTH: u32 = 17;
 pub const MIN_DEPTH: u32 = 1;
-pub const MAX_DEPTH: u32 = 50;
+pub const MAX_DEPTH: u32 = 100;
 
 pub const DEFAULT_MAX_THINK_TIME_MS: u32 = 100;
 pub const MIN_MAX_THINK_TIME_MS: u32 = 10;
-pub const MAX_MAX_THINK_TIME_MS: u32 = 60_000;
+pub const MAX_MAX_THINK_TIME_MS: u32 = 90_000;
 
 #[derive(Deserialize, Debug)]
 pub struct SolveQueryParams {
