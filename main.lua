@@ -5,82 +5,6 @@ local ImportGlobals
 
 -- Holds direct closure data (defining this before the DOM tree for line debugging etc)
 local ClosureBindings = {
-    [12] = function()local wax,script,require=ImportGlobals(12)local ImportGlobals return (function(...)-- Compiled with roblox-ts v3.0.0
-local TS = require(script.Parent.Parent.include.RuntimeLib)
-local ReplicatedStorage = TS.import(script, script.Parent.Parent, "include", "node_modules", "@rbxts", "services").ReplicatedStorage
-return function()
-	local connections = ReplicatedStorage:FindFirstChild("Connections")
-	if not connections or not connections:IsA("Folder") then
-		return nil
-	end
-	local clientError = connections:FindFirstChild("ReportClientError")
-	local _result = clientError
-	if _result ~= nil then
-		_result:Destroy()
-	end
-end
-
-end)() end,
-    [9] = function()local wax,script,require=ImportGlobals(9)local ImportGlobals return (function(...)-- Compiled with roblox-ts v3.0.0
-local function HttpGet(url, options)
-	local _result = options
-	if _result ~= nil then
-		_result = _result.retries
-	end
-	local _condition = _result
-	if _condition == nil then
-		_condition = 0
-	end
-	local retries = math.max(_condition, 0)
-	local _result_1 = options
-	if _result_1 ~= nil then
-		_result_1 = _result_1.retryDelaySeconds
-	end
-	local _condition_1 = _result_1
-	if _condition_1 == nil then
-		_condition_1 = 0.15
-	end
-	local retryDelaySeconds = _condition_1
-	local request = game
-	local lastError = "request failed"
-	do
-		local attempt = 0
-		local _shouldIncrement = false
-		while true do
-			if _shouldIncrement then
-				attempt += 1
-			else
-				_shouldIncrement = true
-			end
-			if not (attempt <= retries) then
-				break
-			end
-			local ok, resultOrError = pcall(function()
-				return request:HttpGet(url)
-			end)
-			if ok then
-				return true, resultOrError
-			end
-			lastError = tostring(resultOrError)
-			if attempt < retries then
-				task.wait(retryDelaySeconds)
-			end
-		end
-	end
-	return false, lastError
-end
-return HttpGet
-
-end)() end,
-    [24] = function()local wax,script,require=ImportGlobals(24)local ImportGlobals return (function(...)return setmetatable({}, {
-	__index = function(self, serviceName)
-		local service = game:GetService(serviceName)
-		self[serviceName] = service
-		return service
-	end,
-})
-
-end)() end,
     [3] = function()local wax,script,require=ImportGlobals(3)local ImportGlobals return (function(...)--[[
 
 	Rayfield Interface Suite
@@ -4007,6 +3931,237 @@ end)
 
 return RayfieldLibrary
 end)() end,
+    [9] = function()local wax,script,require=ImportGlobals(9)local ImportGlobals return (function(...)-- Compiled with roblox-ts v3.0.0
+local function HttpGet(url, options)
+	local _result = options
+	if _result ~= nil then
+		_result = _result.retries
+	end
+	local _condition = _result
+	if _condition == nil then
+		_condition = 0
+	end
+	local retries = math.max(_condition, 0)
+	local _result_1 = options
+	if _result_1 ~= nil then
+		_result_1 = _result_1.retryDelaySeconds
+	end
+	local _condition_1 = _result_1
+	if _condition_1 == nil then
+		_condition_1 = 0.15
+	end
+	local retryDelaySeconds = _condition_1
+	local request = game
+	local lastError = "request failed"
+	do
+		local attempt = 0
+		local _shouldIncrement = false
+		while true do
+			if _shouldIncrement then
+				attempt += 1
+			else
+				_shouldIncrement = true
+			end
+			if not (attempt <= retries) then
+				break
+			end
+			local ok, resultOrError = pcall(function()
+				return request:HttpGet(url)
+			end)
+			if ok then
+				return true, resultOrError
+			end
+			lastError = tostring(resultOrError)
+			if attempt < retries then
+				task.wait(retryDelaySeconds)
+			end
+		end
+	end
+	return false, lastError
+end
+return HttpGet
+
+end)() end,
+    [24] = function()local wax,script,require=ImportGlobals(24)local ImportGlobals return (function(...)return setmetatable({}, {
+	__index = function(self, serviceName)
+		local service = game:GetService(serviceName)
+		self[serviceName] = service
+		return service
+	end,
+})
+
+end)() end,
+    [8] = function()local wax,script,require=ImportGlobals(8)local ImportGlobals return (function(...)-- Compiled with roblox-ts v3.0.0
+local TS = require(script.Parent.Parent.include.RuntimeLib)
+local Workspace = TS.import(script, script.Parent.Parent, "include", "node_modules", "@rbxts", "services").Workspace
+local CoreGui = TS.import(script, script.Parent, "CoreGui")
+local Highlighter
+do
+	Highlighter = setmetatable({}, {
+		__tostring = function()
+			return "Highlighter"
+		end,
+	})
+	Highlighter.__index = Highlighter
+	function Highlighter.new(...)
+		local self = setmetatable({}, Highlighter)
+		return self:constructor(...) or self
+	end
+	function Highlighter:constructor(target, options)
+		local highlighterStorage = Highlighter:getStorage()
+		local _exp = highlighterStorage:GetChildren()
+		-- ▼ ReadonlyArray.forEach ▼
+		local _callback = function(child)
+			if child:IsA("Highlight") and child.Adornee == target then
+				warn("trying to highlight already highlighted object")
+				return nil
+			end
+		end
+		for _k, _v in _exp do
+			_callback(_v, _k - 1, _exp)
+		end
+		-- ▲ ReadonlyArray.forEach ▲
+		-- confusing asl but we gotta work with it
+		local _highlight = Instance.new("Highlight")
+		local _result = options
+		if _result ~= nil then
+			_result = _result.Name
+		end
+		local _condition = _result
+		if _condition == nil then
+			_condition = "Highlight"
+		end
+		_highlight.Name = _condition
+		local _result_1 = options
+		if _result_1 ~= nil then
+			_result_1 = _result_1.FillColor
+		end
+		local _condition_1 = _result_1
+		if _condition_1 == nil then
+			_condition_1 = Color3.fromRGB(59, 235, 223)
+		end
+		_highlight.FillColor = _condition_1
+		local _result_2 = options
+		if _result_2 ~= nil then
+			_result_2 = _result_2.DepthMode
+		end
+		local _condition_2 = _result_2
+		if _condition_2 == nil then
+			_condition_2 = Enum.HighlightDepthMode.AlwaysOnTop
+		end
+		_highlight.DepthMode = _condition_2
+		local _result_3 = options
+		if _result_3 ~= nil then
+			_result_3 = _result_3.FillTransparency
+		end
+		local _condition_3 = _result_3
+		if _condition_3 == nil then
+			_condition_3 = 0.5
+		end
+		_highlight.FillTransparency = _condition_3
+		local _result_4 = options
+		if _result_4 ~= nil then
+			_result_4 = _result_4.OutlineColor
+		end
+		local _condition_4 = _result_4
+		if _condition_4 == nil then
+			_condition_4 = Color3.fromRGB(255, 255, 255)
+		end
+		_highlight.OutlineColor = _condition_4
+		local _result_5 = options
+		if _result_5 ~= nil then
+			_result_5 = _result_5.OutlineTransparency
+		end
+		local _condition_5 = _result_5
+		if _condition_5 == nil then
+			_condition_5 = 0
+		end
+		_highlight.OutlineTransparency = _condition_5
+		local _result_6 = options
+		if _result_6 ~= nil then
+			_result_6 = _result_6.Parent
+		end
+		local _condition_6 = _result_6
+		if _condition_6 == nil then
+			_condition_6 = highlighterStorage
+		end
+		_highlight.Parent = _condition_6
+		_highlight.Adornee = target
+		self.highlight = _highlight
+	end
+	function Highlighter:getStorage()
+		local storage = CoreGui:FindFirstChild("HighlightStorage")
+		if not storage or not storage:IsA("Folder") then
+			local _result = storage
+			if _result ~= nil then
+				_result:Destroy()
+			end
+			local folder = Instance.new("Folder")
+			folder.Name = "HighlightStorage"
+			folder.Parent = CoreGui
+			storage = folder
+		end
+		return storage
+	end
+	function Highlighter:destroy()
+		self.highlight:Destroy()
+	end
+	function Highlighter:destory()
+		self:destroy()
+	end
+	function Highlighter:destroyAll()
+		local storage = CoreGui:FindFirstChild("HighlightStorage")
+		local _result = storage
+		if _result ~= nil then
+			_result = _result:IsA("Folder")
+		end
+		if _result then
+			local _exp = storage:GetChildren()
+			-- ▼ ReadonlyArray.forEach ▼
+			local _callback = function(child)
+				return child:Destroy()
+			end
+			for _k, _v in _exp do
+				_callback(_v, _k - 1, _exp)
+			end
+			-- ▲ ReadonlyArray.forEach ▲
+		end
+		-- Cleanup legacy highlights previously created outside HighlightStorage.
+		local _result_1 = Workspace:FindFirstChild("Board")
+		if _result_1 ~= nil then
+			local _exp = _result_1:GetDescendants()
+			-- ▼ ReadonlyArray.forEach ▼
+			local _callback = function(descendant)
+				if descendant:IsA("Highlight") then
+					descendant:Destroy()
+				end
+			end
+			for _k, _v in _exp do
+				_callback(_v, _k - 1, _exp)
+			end
+			-- ▲ ReadonlyArray.forEach ▲
+		end
+		local _result_2 = Workspace:FindFirstChild("Pieces")
+		if _result_2 ~= nil then
+			local _exp = _result_2:GetDescendants()
+			-- ▼ ReadonlyArray.forEach ▼
+			local _callback = function(descendant)
+				if descendant:IsA("Highlight") then
+					descendant:Destroy()
+				end
+			end
+			for _k, _v in _exp do
+				_callback(_v, _k - 1, _exp)
+			end
+			-- ▲ ReadonlyArray.forEach ▲
+		end
+	end
+end
+return {
+	Highlighter = Highlighter,
+}
+
+end)() end,
     [11] = function()local wax,script,require=ImportGlobals(11)local ImportGlobals return (function(...)local mod = {
 	pieces = {
 		["Pawn"] = "p",
@@ -7057,7 +7212,7 @@ if not ensure_executor_functions_access(queue_on_teleport) then
 		Content = `Do not worry that is OKAY but you will have to manually re-execute the script on rejoin.`,
 	})
 else
-	queue_on_teleport(`loadstring(game:HttpGet("https://github.com/rookietopred02-gif/Auto-Play-Chess-Script/releases/latest/download/main.lua?v=20260221-4"))()`)
+	queue_on_teleport(`loadstring(game:HttpGet("https://github.com/rookietopred02-gif/Auto-Play-Chess-Script/blob/main/main.lua"))()`)
 end
 mainTab:CreateSection("Status")
 local botStatus = ""
@@ -7190,7 +7345,7 @@ disregardTimeToggle = mainTab:CreateToggle({
 -- mainTab.CreateLabel("Maximum amount of time Stockfish has to think")
 thinkTimeSlider = mainTab:CreateSlider({
 	Name = "Think Time",
-	Range = { 0.01, 90 },
+	Range = { 0.01, 120 },
 	CurrentValue = 0.1,
 	Flag = "MaxThinkTimeSeconds",
 	Suffix = "s",
@@ -7208,7 +7363,6 @@ local Workspace = _services.Workspace
 local HttpGet = TS.import(script, script.Parent, "HttpGet")
 local Board = TS.import(script, script.Parent, "LuaFuncs", "board")
 local getPosFromResult = TS.import(script, script.Parent, "getPosFromResult")
-local lastDesyncWarningAt = 0
 local getStableFen = function(board, attempts, waitSeconds)
 	if attempts == nil then
 		attempts = 40
@@ -7252,11 +7406,7 @@ return function(board, depth, maxThinkTime, disregardThinkTime, options)
 	end
 	if board:willCauseDesync() then
 		-- Keep compatibility with previous behavior: this check is advisory only.
-		local now = os.clock()
-		if now - lastDesyncWarningAt >= 2 then
-			warn("board sync check reported a potential desync risk")
-			lastDesyncWarningAt = now
-		end
+		warn("board sync check reported a potential desync risk")
 	end
 	local fen = getStableFen(board)
 	if not (fen ~= "" and fen) then
@@ -7354,177 +7504,6 @@ return function(result)
 	local y2 = rankToY(string.sub(result, 4, 4))
 	return x1, y1, x2, y2
 end
-
-end)() end,
-    [8] = function()local wax,script,require=ImportGlobals(8)local ImportGlobals return (function(...)-- Compiled with roblox-ts v3.0.0
-local TS = require(script.Parent.Parent.include.RuntimeLib)
-local Workspace = TS.import(script, script.Parent.Parent, "include", "node_modules", "@rbxts", "services").Workspace
-local CoreGui = TS.import(script, script.Parent, "CoreGui")
-local Highlighter
-do
-	Highlighter = setmetatable({}, {
-		__tostring = function()
-			return "Highlighter"
-		end,
-	})
-	Highlighter.__index = Highlighter
-	function Highlighter.new(...)
-		local self = setmetatable({}, Highlighter)
-		return self:constructor(...) or self
-	end
-	function Highlighter:constructor(target, options)
-		local highlighterStorage = Highlighter:getStorage()
-		local _exp = highlighterStorage:GetChildren()
-		-- ▼ ReadonlyArray.forEach ▼
-		local _callback = function(child)
-			if child:IsA("Highlight") and child.Adornee == target then
-				warn("trying to highlight already highlighted object")
-				return nil
-			end
-		end
-		for _k, _v in _exp do
-			_callback(_v, _k - 1, _exp)
-		end
-		-- ▲ ReadonlyArray.forEach ▲
-		-- confusing asl but we gotta work with it
-		local _highlight = Instance.new("Highlight")
-		local _result = options
-		if _result ~= nil then
-			_result = _result.Name
-		end
-		local _condition = _result
-		if _condition == nil then
-			_condition = "Highlight"
-		end
-		_highlight.Name = _condition
-		local _result_1 = options
-		if _result_1 ~= nil then
-			_result_1 = _result_1.FillColor
-		end
-		local _condition_1 = _result_1
-		if _condition_1 == nil then
-			_condition_1 = Color3.fromRGB(59, 235, 223)
-		end
-		_highlight.FillColor = _condition_1
-		local _result_2 = options
-		if _result_2 ~= nil then
-			_result_2 = _result_2.DepthMode
-		end
-		local _condition_2 = _result_2
-		if _condition_2 == nil then
-			_condition_2 = Enum.HighlightDepthMode.AlwaysOnTop
-		end
-		_highlight.DepthMode = _condition_2
-		local _result_3 = options
-		if _result_3 ~= nil then
-			_result_3 = _result_3.FillTransparency
-		end
-		local _condition_3 = _result_3
-		if _condition_3 == nil then
-			_condition_3 = 0.5
-		end
-		_highlight.FillTransparency = _condition_3
-		local _result_4 = options
-		if _result_4 ~= nil then
-			_result_4 = _result_4.OutlineColor
-		end
-		local _condition_4 = _result_4
-		if _condition_4 == nil then
-			_condition_4 = Color3.fromRGB(255, 255, 255)
-		end
-		_highlight.OutlineColor = _condition_4
-		local _result_5 = options
-		if _result_5 ~= nil then
-			_result_5 = _result_5.OutlineTransparency
-		end
-		local _condition_5 = _result_5
-		if _condition_5 == nil then
-			_condition_5 = 0
-		end
-		_highlight.OutlineTransparency = _condition_5
-		local _result_6 = options
-		if _result_6 ~= nil then
-			_result_6 = _result_6.Parent
-		end
-		local _condition_6 = _result_6
-		if _condition_6 == nil then
-			_condition_6 = highlighterStorage
-		end
-		_highlight.Parent = _condition_6
-		_highlight.Adornee = target
-		self.highlight = _highlight
-	end
-	function Highlighter:getStorage()
-		local storage = CoreGui:FindFirstChild("HighlightStorage")
-		if not storage or not storage:IsA("Folder") then
-			local _result = storage
-			if _result ~= nil then
-				_result:Destroy()
-			end
-			local folder = Instance.new("Folder")
-			folder.Name = "HighlightStorage"
-			folder.Parent = CoreGui
-			storage = folder
-		end
-		return storage
-	end
-	function Highlighter:destroy()
-		self.highlight:Destroy()
-	end
-	function Highlighter:destory()
-		self:destroy()
-	end
-	function Highlighter:destroyAll()
-		local storage = CoreGui:FindFirstChild("HighlightStorage")
-		local _result = storage
-		if _result ~= nil then
-			_result = _result:IsA("Folder")
-		end
-		if _result then
-			local _exp = storage:GetChildren()
-			-- ▼ ReadonlyArray.forEach ▼
-			local _callback = function(child)
-				return child:Destroy()
-			end
-			for _k, _v in _exp do
-				_callback(_v, _k - 1, _exp)
-			end
-			-- ▲ ReadonlyArray.forEach ▲
-		end
-		-- Cleanup legacy highlights previously created outside HighlightStorage.
-		local _result_1 = Workspace:FindFirstChild("Board")
-		if _result_1 ~= nil then
-			local _exp = _result_1:GetDescendants()
-			-- ▼ ReadonlyArray.forEach ▼
-			local _callback = function(descendant)
-				if descendant:IsA("Highlight") then
-					descendant:Destroy()
-				end
-			end
-			for _k, _v in _exp do
-				_callback(_v, _k - 1, _exp)
-			end
-			-- ▲ ReadonlyArray.forEach ▲
-		end
-		local _result_2 = Workspace:FindFirstChild("Pieces")
-		if _result_2 ~= nil then
-			local _exp = _result_2:GetDescendants()
-			-- ▼ ReadonlyArray.forEach ▼
-			local _callback = function(descendant)
-				if descendant:IsA("Highlight") then
-					descendant:Destroy()
-				end
-			end
-			for _k, _v in _exp do
-				_callback(_v, _k - 1, _exp)
-			end
-			-- ▲ ReadonlyArray.forEach ▲
-		end
-	end
-end
-return {
-	Highlighter = Highlighter,
-}
 
 end)() end,
     [19] = function()local wax,script,require=ImportGlobals(19)local ImportGlobals return (function(...)local Promise = require(script.Parent.Promise)
@@ -7789,6 +7768,22 @@ end
 return TS
 
 end)() end,
+    [12] = function()local wax,script,require=ImportGlobals(12)local ImportGlobals return (function(...)-- Compiled with roblox-ts v3.0.0
+local TS = require(script.Parent.Parent.include.RuntimeLib)
+local ReplicatedStorage = TS.import(script, script.Parent.Parent, "include", "node_modules", "@rbxts", "services").ReplicatedStorage
+return function()
+	local connections = ReplicatedStorage:FindFirstChild("Connections")
+	if not connections or not connections:IsA("Folder") then
+		return nil
+	end
+	local clientError = connections:FindFirstChild("ReportClientError")
+	local _result = clientError
+	if _result ~= nil then
+		_result:Destroy()
+	end
+end
+
+end)() end,
     [14] = function()local wax,script,require=ImportGlobals(14)local ImportGlobals return (function(...)-- Compiled with roblox-ts v3.0.0
 local function findOrCreateInstance(parent, child, instance)
 	if parent:FindFirstChild(child) then
@@ -7822,8 +7817,6 @@ local hasStartedListener = false
 local mouseStepDelaySeconds = 0
 local mouseClickDelaySeconds = 0
 local mouseAbsCoordMode
-local debugPointStorage
-local ABS_MOVE_TOLERANCE_PX = 4
 local getConnectionsFolder = function()
 	local connections = ReplicatedStorage:FindFirstChild("Connections")
 	if not connections or not connections:IsA("Folder") then
@@ -8002,12 +7995,10 @@ local addPartSamplePoints = function(points, part)
 	local xOffset = math.max(half.X * 0.4, 0.05)
 	local yOffset = math.max(half.Y * 0.9, 0.05)
 	local zOffset = math.max(half.Z * 0.4, 0.05)
-	addUniquePoint(points, worldPointFromOffset(part.CFrame, Vector3.new(0, yOffset, 0)))
-	addUniquePoint(points, worldPointFromOffset(part.CFrame, Vector3.new(0, 0, 0)))
-	addUniquePoint(points, worldPointFromOffset(part.CFrame, Vector3.new(xOffset, yOffset * 0.75, 0)))
-	addUniquePoint(points, worldPointFromOffset(part.CFrame, Vector3.new(-xOffset, yOffset * 0.75, 0)))
-	addUniquePoint(points, worldPointFromOffset(part.CFrame, Vector3.new(0, yOffset * 0.75, zOffset)))
-	addUniquePoint(points, worldPointFromOffset(part.CFrame, Vector3.new(0, yOffset * 0.75, -zOffset)))
+	local offsets = { Vector3.new(0, yOffset, 0), Vector3.new(0, 0, 0), Vector3.new(xOffset, yOffset * 0.75, 0), Vector3.new(-xOffset, yOffset * 0.75, 0), Vector3.new(0, yOffset * 0.75, zOffset), Vector3.new(0, yOffset * 0.75, -zOffset) }
+	for _, offset in offsets do
+		addUniquePoint(points, worldPointFromOffset(part.CFrame, offset))
+	end
 end
 local resolveTileBasePart = function(tile)
 	if tile:IsA("BasePart") then
@@ -8050,18 +8041,13 @@ local isAllowedTopHit = function(hit, allowed)
 	return false
 end
 local getDebugPointStorage = function()
-	if debugPointStorage and debugPointStorage.Parent == Workspace then
-		return debugPointStorage
-	end
 	local existing = Workspace:FindFirstChild("AutoPlayDebugPoints")
 	if existing and existing:IsA("Folder") then
-		debugPointStorage = existing
 		return existing
 	end
 	local folder = Instance.new("Folder")
 	folder.Name = "AutoPlayDebugPoints"
 	folder.Parent = Workspace
-	debugPointStorage = folder
 	return folder
 end
 local createDebugPointMarker = function(worldPoint, phase)
@@ -8107,23 +8093,23 @@ local createDebugPointMarker = function(worldPoint, phase)
 	dotStroke.Parent = dot
 	Debris:AddItem(marker, DEBUG_POINT_MARKER_LIFETIME_SECONDS)
 end
-local generateTileTopSamples = function(part)
+local generateTileTopSamples = function(part, density)
 	local points = {}
-	local gridSize = TILE_SAMPLE_GRID_HIGH
-	local invGridDenominator = 1 / (gridSize - 1)
+	local gridSize = if density == "high" then TILE_SAMPLE_GRID_HIGH else TILE_SAMPLE_GRID_HIGH
 	local normalizedRange = 1 - TILE_SAMPLE_MARGIN * 2
 	local topOffsetY = part.Size.Y * 0.5 + TILE_SAMPLE_HEIGHT_OFFSET
 	for gridX = 0, gridSize - 1 do
-		local normalizedX = TILE_SAMPLE_MARGIN + (gridX * invGridDenominator) * normalizedRange
+		local normalizedX = TILE_SAMPLE_MARGIN + (gridX / (gridSize - 1)) * normalizedRange
 		local localX = (normalizedX - 0.5) * part.Size.X
 		for gridZ = 0, gridSize - 1 do
-			local normalizedZ = TILE_SAMPLE_MARGIN + (gridZ * invGridDenominator) * normalizedRange
+			local normalizedZ = TILE_SAMPLE_MARGIN + (gridZ / (gridSize - 1)) * normalizedRange
 			local localZ = (normalizedZ - 0.5) * part.Size.Z
 			local centerDistanceSq = (normalizedX - 0.5) ^ 2 + (normalizedZ - 0.5) ^ 2
-			points[#points + 1] = {
+			local _arg0 = {
 				point = worldPointFromOffset(part.CFrame, Vector3.new(localX, topOffsetY, localZ)),
 				distanceToCenter = centerDistanceSq,
 			}
+			table.insert(points, _arg0)
 		end
 	end
 	table.sort(points, function(a, b)
@@ -8131,7 +8117,8 @@ local generateTileTopSamples = function(part)
 	end)
 	local orderedPoints = {}
 	for _, entry in points do
-		orderedPoints[#orderedPoints + 1] = entry.point
+		local _point = entry.point
+		table.insert(orderedPoints, _point)
 	end
 	return orderedPoints
 end
@@ -8153,12 +8140,10 @@ local addBoundingBoxSamplePoints = function(points, boundingBox)
 	local xOffset = math.max(half.X * 0.45, 0.05)
 	local yOffset = math.max(half.Y * 0.95, 0.05)
 	local zOffset = math.max(half.Z * 0.45, 0.05)
-	addUniquePoint(points, worldPointFromOffset(boxCFrame, Vector3.new(0, yOffset, 0)))
-	addUniquePoint(points, worldPointFromOffset(boxCFrame, Vector3.new(0, 0, 0)))
-	addUniquePoint(points, worldPointFromOffset(boxCFrame, Vector3.new(xOffset, yOffset * 0.7, zOffset)))
-	addUniquePoint(points, worldPointFromOffset(boxCFrame, Vector3.new(-xOffset, yOffset * 0.7, zOffset)))
-	addUniquePoint(points, worldPointFromOffset(boxCFrame, Vector3.new(xOffset, yOffset * 0.7, -zOffset)))
-	addUniquePoint(points, worldPointFromOffset(boxCFrame, Vector3.new(-xOffset, yOffset * 0.7, -zOffset)))
+	local offsets = { Vector3.new(0, yOffset, 0), Vector3.new(0, 0, 0), Vector3.new(xOffset, yOffset * 0.7, zOffset), Vector3.new(-xOffset, yOffset * 0.7, zOffset), Vector3.new(xOffset, yOffset * 0.7, -zOffset), Vector3.new(-xOffset, yOffset * 0.7, -zOffset) }
+	for _, offset in offsets do
+		addUniquePoint(points, worldPointFromOffset(boxCFrame, offset))
+	end
 end
 local generatePieceSurfaceSamples = function(target)
 	local points = {}
@@ -8254,23 +8239,20 @@ local resolveTopVisiblePointFromSamples = function(camera, worldPoints, allowedH
 		visibleSampleCount += 1
 		local ray = camera:ScreenPointToRay(screenPoint.X, screenPoint.Y)
 		local hit = Workspace:Raycast(ray.Origin, ray.Direction * CLICK_RAY_DISTANCE, raycastParams)
-		if not hit then
+		if not hit or not hit.Instance then
 			continue
 		end
-		local hitInstance = hit.Instance
-		if not hitInstance then
-			continue
-		end
-		if not isAllowedTopHit(hitInstance, allowedHits) then
-			if not firstBlockingHit then
-				firstBlockingHit = hitInstance:GetFullName()
+		if not isAllowedTopHit(hit.Instance, allowedHits) then
+			if not (firstBlockingHit ~= "" and firstBlockingHit) then
+				firstBlockingHit = hit.Instance:GetFullName()
 			end
 			continue
 		end
-		topHitPoints[#topHitPoints + 1] = {
+		local _arg0 = {
 			screen = Vector3.new(screenPoint.X, screenPoint.Y, screenPoint.Z),
 			world = hit.Position,
 		}
+		table.insert(topHitPoints, _arg0)
 	end
 	if #topHitPoints > 0 then
 		local interiorPoint = pickInteriorSampleHitPoint(topHitPoints)
@@ -8291,7 +8273,7 @@ local resolveTopVisibleScreenPoint = function(context)
 	end
 	local raycastParams = buildClickRaycastParams()
 	local tileStage = `{context.phase} {context.coordinate} tile-sampling`
-	local tileSamples = generateTileTopSamples(context.tilePart)
+	local tileSamples = generateTileTopSamples(context.tilePart, "high")
 	local _binding = resolveTopVisiblePointFromSamples(camera, tileSamples, context.allowedHits, raycastParams, tileStage)
 	local tileScreenPoint = _binding[1]
 	local tileReason = _binding[2]
@@ -8434,55 +8416,59 @@ local moveAbsoluteToTarget = function(target)
 			score = math.abs(dx) + math.abs(dy),
 		}, mode }
 	end
-	local pickBetterState = function(screenState, viewportState)
-		if screenState and viewportState then
-			if viewportState.score < screenState.score then
-				return {
-					mode = "viewport",
-					state = viewportState,
-				}
+	if mouseAbsCoordMode == nil then
+		local _binding = tryMode("screen")
+		local okScreen = _binding[1]
+		local msgScreen = _binding[2]
+		local stateScreen = _binding[3]
+		local modeScreen = _binding[4]
+		local _binding_1 = tryMode("viewport")
+		local okViewport = _binding_1[1]
+		local msgViewport = _binding_1[2]
+		local stateViewport = _binding_1[3]
+		local modeViewport = _binding_1[4]
+		if okScreen and okViewport and stateScreen and stateViewport and modeScreen then
+			if stateViewport.score < stateScreen.score and modeViewport then
+				mouseAbsCoordMode = modeViewport
+				return { true, msgViewport, stateViewport.dx, stateViewport.dy, stateViewport.cursor }
 			end
-			return {
-				mode = "screen",
-				state = screenState,
-			}
+			mouseAbsCoordMode = modeScreen
+			local _binding_2 = tryMode(modeScreen)
+			local okScreen2 = _binding_2[1]
+			local msgScreen2 = _binding_2[2]
+			local stateScreen2 = _binding_2[3]
+			if okScreen2 and stateScreen2 then
+				return { true, msgScreen2, stateScreen2.dx, stateScreen2.dy, stateScreen2.cursor }
+			end
+			return { true, msgScreen, stateScreen.dx, stateScreen.dy, stateScreen.cursor }
 		end
-		if screenState then
-			return {
-				mode = "screen",
-				state = screenState,
-			}
+		if okScreen and stateScreen and modeScreen then
+			mouseAbsCoordMode = modeScreen
+			return { true, msgScreen, stateScreen.dx, stateScreen.dy, stateScreen.cursor }
 		end
-		if viewportState then
-			return {
-				mode = "viewport",
-				state = viewportState,
-			}
+		if okViewport and stateViewport and modeViewport then
+			mouseAbsCoordMode = modeViewport
+			return { true, msgViewport, stateViewport.dx, stateViewport.dy, stateViewport.cursor }
 		end
-		return nil
+		return { false, `abs move failed in both modes (screen: {msgScreen}; viewport: {msgViewport})`, 0, 0, cursorAfterMove }
 	end
-	-- Always validate absolute movement quality each call.
-	-- This prevents a bad first calibration from locking offset for the whole match.
-	local preferredMode = mouseAbsCoordMode or "screen"
-	local secondaryMode = if preferredMode == "screen" then "viewport" else "screen"
-	local _binding = tryMode(preferredMode)
-	local okPreferred = _binding[1]
-	local msgPreferred = _binding[2]
-	local statePreferred = _binding[3]
-	if okPreferred and statePreferred and statePreferred.score <= ABS_MOVE_TOLERANCE_PX then
-		mouseAbsCoordMode = preferredMode
-		return { true, `{msgPreferred} tol<={ABS_MOVE_TOLERANCE_PX}`, statePreferred.dx, statePreferred.dy, statePreferred.cursor }
+	local _binding = tryMode(mouseAbsCoordMode)
+	local ok = _binding[1]
+	local msg = _binding[2]
+	local state = _binding[3]
+	if ok and state then
+		return { true, msg, state.dx, state.dy, state.cursor }
 	end
-	local _binding_1 = tryMode(secondaryMode)
-	local okSecondary = _binding_1[1]
-	local msgSecondary = _binding_1[2]
-	local stateSecondary = _binding_1[3]
-	local best = pickBetterState(if okPreferred then statePreferred else nil, if okSecondary then stateSecondary else nil)
-	if not best then
-		return { false, `abs move failed ({preferredMode}: {msgPreferred}; {secondaryMode}: {msgSecondary})`, 0, 0, cursorAfterMove }
+	local otherMode = if mouseAbsCoordMode == "screen" then "viewport" else "screen"
+	local _binding_1 = tryMode(otherMode)
+	local okOther = _binding_1[1]
+	local msgOther = _binding_1[2]
+	local otherState = _binding_1[3]
+	if okOther and otherState then
+		mouseAbsCoordMode = otherMode
+		return { true, msgOther, otherState.dx, otherState.dy, otherState.cursor }
 	end
-	mouseAbsCoordMode = best.mode
-	return { true, `{if best.mode == preferredMode then msgPreferred else msgSecondary} (recalibrated mode={best.mode}; tol={ABS_MOVE_TOLERANCE_PX}; score={best.state.score})`, best.state.dx, best.state.dy, best.state.cursor }
+	return { false, `abs move failed ({msg}; {msgOther})`, 0, 0, cursorAfterMove }
 end
 local applyClickNudge = function()
 	local didNudgeOut, nudgeOutError = pcall(function()
@@ -8526,9 +8512,6 @@ local clickContextCommon = function(context, resolvedPoint, pointMessage)
 		return { false, `{context.phase} {context.coordinate} failed ({moveMessage2})`, nil }
 	end
 	task.wait()
-	if mouseClickDelaySeconds > 0 then
-		task.wait(mouseClickDelaySeconds)
-	end
 	mouse1click()
 	local clickedPoint = getCurrentCursorPosition()
 	return { true, `{context.button} clicked {context.phase} {context.coordinate} @ screen({clickedPoint.X},{clickedPoint.Y}) world({math.round(resolvedPoint.world.X * 100) / 100},{math.round(resolvedPoint.world.Y * 100) / 100},{math.round(resolvedPoint.world.Z * 100) / 100}) ({pointMessage}; target={target.screenX},{target.screenY} via {targetSource}; {moveMessage}; {nudgeMessage}; {moveMessage2})`, clickedPoint }
@@ -8670,10 +8653,26 @@ local ObjectTree = {
         },
         {
             {
-                5,
-                4,
+                2,
+                1,
                 {
-                    "main"
+                    "libs"
+                },
+                {
+                    {
+                        4,
+                        2,
+                        {
+                            "Unc"
+                        }
+                    },
+                    {
+                        3,
+                        2,
+                        {
+                            "Rayfield"
+                        }
+                    }
                 }
             },
             {
@@ -8698,6 +8697,29 @@ local ObjectTree = {
                                 },
                                 {
                                     {
+                                        22,
+                                        1,
+                                        {
+                                            "compiler-types"
+                                        },
+                                        {
+                                            {
+                                                23,
+                                                1,
+                                                {
+                                                    "types"
+                                                }
+                                            }
+                                        }
+                                    },
+                                    {
+                                        24,
+                                        2,
+                                        {
+                                            "services"
+                                        }
+                                    },
+                                    {
                                         25,
                                         1,
                                         {
@@ -8721,29 +8743,6 @@ local ObjectTree = {
                                                 }
                                             }
                                         }
-                                    },
-                                    {
-                                        22,
-                                        1,
-                                        {
-                                            "compiler-types"
-                                        },
-                                        {
-                                            {
-                                                23,
-                                                1,
-                                                {
-                                                    "types"
-                                                }
-                                            }
-                                        }
-                                    },
-                                    {
-                                        24,
-                                        2,
-                                        {
-                                            "services"
-                                        }
                                     }
                                 }
                             }
@@ -8766,6 +8765,13 @@ local ObjectTree = {
                 }
             },
             {
+                5,
+                4,
+                {
+                    "main"
+                }
+            },
+            {
                 6,
                 1,
                 {
@@ -8773,45 +8779,10 @@ local ObjectTree = {
                 },
                 {
                     {
-                        8,
-                        2,
-                        {
-                            "Highlighter"
-                        }
-                    },
-                    {
-                        13,
-                        2,
-                        {
-                            "findBestMove"
-                        }
-                    },
-                    {
                         14,
                         2,
                         {
                             "findOrCreateInstance"
-                        }
-                    },
-                    {
-                        12,
-                        2,
-                        {
-                            "destoryErrorLogging"
-                        }
-                    },
-                    {
-                        15,
-                        2,
-                        {
-                            "getPosFromResult"
-                        }
-                    },
-                    {
-                        9,
-                        2,
-                        {
-                            "HttpGet"
                         }
                     },
                     {
@@ -8831,10 +8802,31 @@ local ObjectTree = {
                         }
                     },
                     {
-                        16,
+                        12,
                         2,
                         {
-                            "remoteAutoplay"
+                            "destoryErrorLogging"
+                        }
+                    },
+                    {
+                        15,
+                        2,
+                        {
+                            "getPosFromResult"
+                        }
+                    },
+                    {
+                        13,
+                        2,
+                        {
+                            "findBestMove"
+                        }
+                    },
+                    {
+                        9,
+                        2,
+                        {
+                            "HttpGet"
                         }
                     },
                     {
@@ -8843,28 +8835,19 @@ local ObjectTree = {
                         {
                             "CoreGui"
                         }
-                    }
-                }
-            },
-            {
-                2,
-                1,
-                {
-                    "libs"
-                },
-                {
+                    },
                     {
-                        3,
+                        16,
                         2,
                         {
-                            "Rayfield"
+                            "remoteAutoplay"
                         }
                     },
                     {
-                        4,
+                        8,
                         2,
                         {
-                            "Unc"
+                            "Highlighter"
                         }
                     }
                 }
@@ -8875,21 +8858,21 @@ local ObjectTree = {
 
 -- Line offsets for debugging (only included when minifyTables is false)
 local LineOffsets = {
-    [12] = 8,
-    [9] = 24,
-    [24] = 75,
-    [3] = 84,
-    [11] = 4010,
-    [18] = 4372,
-    [4] = 6442,
-    [7] = 6918,
-    [5] = 6922,
-    [13] = 7203,
-    [19] = 7530,
-    [8] = 7359,
-    [15] = 7331,
-    [14] = 7792,
-    [16] = 7805
+    [3] = 8,
+    [4] = 6597,
+    [5] = 7077,
+    [7] = 7073,
+    [8] = 3994,
+    [9] = 3934,
+    [11] = 4165,
+    [12] = 7771,
+    [13] = 7358,
+    [14] = 7787,
+    [15] = 7481,
+    [16] = 7800,
+    [19] = 7509,
+    [18] = 4527,
+    [24] = 3985
 }
 
 -- Misc AOT variable imports
@@ -9383,3 +9366,4 @@ end
 for _, ScriptRef in next, ScriptsToRun do
     Defer(LoadScript, ScriptRef)
 end
+

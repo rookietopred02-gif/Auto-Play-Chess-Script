@@ -165,7 +165,7 @@ if (!ensure_executor_functions_access(queue_on_teleport))
     })
 else
     queue_on_teleport(
-        `loadstring(game:HttpGet("https://github.com/rookietopred02-gif/Auto-Play-Chess-Script/releases/latest/download/main.lua?v=20260221-4"))()`
+        `loadstring(game:HttpGet("https://github.com/rookietopred02-gif/Auto-Play-Chess-Script/blob/main/main.lua"))()`
     )
 
 mainTab.CreateSection("Status")
@@ -337,3 +337,4 @@ const thinkTimeSlider = mainTab.CreateSlider({
 })
 
 Rayfield.LoadConfiguration()
+
