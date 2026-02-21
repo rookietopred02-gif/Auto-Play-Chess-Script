@@ -177,10 +177,8 @@ impl Engine {
         if disregard_movetime {
             let _ = self.write_fmt(format_args!("go depth {}\n", depth));
         } else {
-            let _ = self.write_fmt(format_args!(
-                "go depth {} movetime {}\n",
-                depth, self.movetime
-            ));
+            // Respect GUI think-time limit strictly when depth limit is not forced.
+            let _ = self.write_fmt(format_args!("go movetime {}\n", self.movetime));
         }
 
         loop {

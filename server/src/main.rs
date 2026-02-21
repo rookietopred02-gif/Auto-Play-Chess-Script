@@ -242,8 +242,11 @@ async fn solve(data: web::Data<AppState>, query: web::Query<SolveQueryParams>) -
     Printer::print("Depth", CommonColors::BrightMagenta);
     println!(": {depth}");
 
-    Printer::print("Max Think Time", CommonColors::BrightMagenta);
+    Printer::print("Max Think Time (ms)", CommonColors::BrightMagenta);
     println!(": {max_think_time}");
+
+    Printer::print("Max Think Time (s)", CommonColors::BrightMagenta);
+    println!(": {:.2}", (max_think_time as f64) / 1000.0);
 
     Printer::print("Disregard Think Time", CommonColors::BrightMagenta);
     println!(": {disregard_think_time}");
