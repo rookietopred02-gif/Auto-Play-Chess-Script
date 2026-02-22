@@ -17,7 +17,7 @@ It runs a local Stockfish server and a Rayfield client script with:
 - Releases page:  
   `https://github.com/rookietopred02-gif/Auto-Play-Chess-Script/releases`
 - Main loader file (`main.lua`):  
-  `https://raw.githubusercontent.com/rookietopred02-gif/Auto-Play-Chess-Script/refs/heads/main/main.lua?v=20260221-5`
+  `https://raw.githubusercontent.com/rookietopred02-gif/Auto-Play-Chess-Script/refs/heads/main/main.lua`
 - Windows server binary (`roblox-chess-script.exe`):  
   `https://github.com/rookietopred02-gif/Auto-Play-Chess-Script/releases/latest/download/roblox-chess-script.exe`
 
